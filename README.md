@@ -15,3 +15,4 @@ npm run build
 ```
 
 The project is automatically deployed to GitHub Pages on every push to the `main` branch.
+
