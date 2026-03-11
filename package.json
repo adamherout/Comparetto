@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "diff": "^8.0.3",
     "vue": "^3.5.25"
   },
   "devDependencies": {

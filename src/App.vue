@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { diffWordsWithSpace } from 'diff'
 
 // State for the two text panels
 const leftText = ref('')
@@ -7,6 +8,20 @@ const rightText = ref('')
 
 // State for notification
 const notification = ref('')
+
+// Watch both text boxes for any changes
+watch([leftText, rightText], ([newLeft, newRight]) => {
+  // No calculation if both are empty
+  if (!newLeft && !newRight) return
+
+  // Calculate the diff
+  const differences = diffWordsWithSpace(newLeft, newRight)
+
+  // TMP: Log the differences to the console
+  console.clear()
+  console.log('Diff Result:')
+  console.log(differences)
+})
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
