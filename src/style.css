@@ -119,6 +119,75 @@ textarea {
   transform: translate(-50%, -10px);
 }
 
+.content-display {
+  flex: 1;
+  padding: 1rem;
+  background-color: #242424;
+  color: rgba(255, 255, 255, 0.87);
+  font-family: inherit;
+  font-size: 1rem;
+  overflow-y: auto;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+.placeholder {
+  color: #888;
+}
+
+.highlight-removed {
+  background-color: rgba(255, 74, 74, 0.3);
+  color: #ffb3b3;
+  border-radius: 3px;
+}
+
+.highlight-added {
+  background-color: rgba(66, 184, 131, 0.3);
+  color: #a2f5c9;
+  border-radius: 3px;
+}
+
+.replacement-grid {
+  display: inline-grid;
+  grid-template-columns: auto 1fr; 
+  vertical-align: baseline;
+}
+
+.ghost-layer {
+  grid-column: 1 / 3; 
+  grid-row: 1;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.visible-layer {
+  grid-column: 1 / 2; 
+  grid-row: 1;
+}
+
+.filler-layer {
+  grid-column: 2 / 3; 
+  grid-row: 1;
+}
+
+.dotted-bg {
+  background-color: rgba(100, 108, 255, 0.1);
+  border-radius: 3px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+  background-size: 8px 8px;
+  background-position: center;
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.unselectable-space {
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
 @media (max-width: 1000px) {
   .panels-container {
     flex-direction: column;
