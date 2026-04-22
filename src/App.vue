@@ -6,6 +6,9 @@ import { diffWordsWithSpace } from 'diff'
 const leftText = ref('')
 const rightText = ref('')
 
+// State to toggle diff highlighting
+const isDiffEnabled = ref(true)
+
 // State for notification
 const notification = ref('')
 
@@ -101,17 +104,35 @@ const pasteText = async (targetPanel) => {
   <div class="workspace">
     <header class="header">
       <h1>Comparetto</h1>
+      <div class="toggle-container">
+        <span class="toggle-label">Toggle Diff</span>
+        <label class="switch">
+          <input type="checkbox" v-model="isDiffEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
     </header>
     <div class="panels-container">
       <div class="panel">
         <div class="toolbar">
           <span class="label">Original Text</span>
           <div class="actions">
-            <button @click="copyText(leftText)">Copy</button>
-            <button @click="pasteText('left')">Paste</button>
+            <!-- Copy button is currently disabled for the left panel -->
+            <!-- <button class="icon-btn" title="Copy Text" @click="copyText(leftText)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button> -->
+            <button class="icon-btn" title="Paste Text" @click="pasteText('left')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </button>
           </div>
         </div>
-        <div class="content-display">
+        <div v-if="isDiffEnabled" class="content-display">
           <template v-for="(block, index) in processedDiff" :key="'left-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
               <span class="ghost-layer">
@@ -133,18 +154,33 @@ const pasteText = async (targetPanel) => {
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
           </template>
-          <span v-if="!leftText" class="placeholder">Paste original text here...</span>
+          <span v-if="!leftText" class="placeholder">Original ...</span>
         </div>
+        <textarea 
+          v-else 
+          v-model="leftText" 
+          placeholder="Original ..."
+        ></textarea>
       </div>
       <div class="panel">
         <div class="toolbar">
           <span class="label">Modified Text</span>
           <div class="actions">
-            <button @click="copyText(rightText)">Copy</button>
-            <button @click="pasteText('right')">Paste</button>
+            <button class="icon-btn" title="Copy Text" @click="copyText(rightText)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+            <button class="icon-btn" title="Paste Text" @click="pasteText('right')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </button>
           </div>
         </div>
-        <div class="content-display">
+        <div v-if="isDiffEnabled" class="content-display">
           <template v-for="(block, index) in processedDiff" :key="'right-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
               <span class="ghost-layer">
@@ -166,8 +202,13 @@ const pasteText = async (targetPanel) => {
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
           </template>
-          <span v-if="!rightText" class="placeholder">Paste modified text here...</span>
+          <span v-if="!rightText" class="placeholder">Modified ...</span>
         </div>
+        <textarea 
+          v-else 
+          v-model="rightText" 
+          placeholder="Modified ..."
+        ></textarea>
       </div>
     </div>
   </div>
