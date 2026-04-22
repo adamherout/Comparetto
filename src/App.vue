@@ -6,6 +6,9 @@ import { diffWordsWithSpace } from 'diff'
 const leftText = ref('')
 const rightText = ref('')
 
+// State to toggle diff highlighting
+const isDiffEnabled = ref(true)
+
 // State for notification
 const notification = ref('')
 
@@ -101,6 +104,13 @@ const pasteText = async (targetPanel) => {
   <div class="workspace">
     <header class="header">
       <h1>Comparetto</h1>
+      <div class="toggle-container">
+        <span class="toggle-label">Toggle Diff</span>
+        <label class="switch">
+          <input type="checkbox" v-model="isDiffEnabled">
+          <span class="slider"></span>
+        </label>
+      </div>
     </header>
     <div class="panels-container">
       <div class="panel">
@@ -111,7 +121,7 @@ const pasteText = async (targetPanel) => {
             <button @click="pasteText('left')">Paste</button>
           </div>
         </div>
-        <div class="content-display">
+        <div v-if="isDiffEnabled" class="content-display">
           <template v-for="(block, index) in processedDiff" :key="'left-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
               <span class="ghost-layer">
@@ -135,6 +145,11 @@ const pasteText = async (targetPanel) => {
           </template>
           <span v-if="!leftText" class="placeholder">Paste original text here...</span>
         </div>
+        <textarea 
+          v-else 
+          v-model="leftText" 
+          placeholder="Write or paste original text here..."
+        ></textarea>
       </div>
       <div class="panel">
         <div class="toolbar">
@@ -144,7 +159,7 @@ const pasteText = async (targetPanel) => {
             <button @click="pasteText('right')">Paste</button>
           </div>
         </div>
-        <div class="content-display">
+        <div v-if="isDiffEnabled" class="content-display">
           <template v-for="(block, index) in processedDiff" :key="'right-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
               <span class="ghost-layer">
@@ -168,6 +183,11 @@ const pasteText = async (targetPanel) => {
           </template>
           <span v-if="!rightText" class="placeholder">Paste modified text here...</span>
         </div>
+        <textarea 
+          v-else 
+          v-model="rightText" 
+          placeholder="Write or paste modified text here..."
+        ></textarea>
       </div>
     </div>
   </div>
