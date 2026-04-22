@@ -16,7 +16,7 @@
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .workspace {
@@ -174,8 +174,8 @@ textarea {
 .dotted-bg {
   background-color: rgba(100, 108, 255, 0.1);
   border-radius: 3px;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px);
-  background-size: 8px 8px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 12px 16px;
   background-position: center;
   color: transparent;
   pointer-events: none;
