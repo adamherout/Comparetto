@@ -1,68 +1,22 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { diffWordsWithSpace } from 'diff'
+import { ref } from 'vue'
+import { useDiffEngine } from './composables/useDiffEngine'
 
-// State for the two text panels
-const leftText = ref('')
-const rightText = ref('')
-
-// State to toggle diff highlighting
-const isDiffEnabled = ref(true)
+// Use the diff engine composable to manage state and logic related to text comparison
+const { 
+  leftText, 
+  rightText, 
+  isDiffEnabled, 
+  processedDiff,
+  rightUpdateKey,
+  splitWhitespace, 
+  handleEdit,
+  handleKeyDown,
+  handlePaste
+} = useDiffEngine()
 
 // State for notification
 const notification = ref('')
-
-// State to hold the diff result
-const diffResult = ref([])
-
-// State to hold the processed diff with replacement info
-const processedDiff = ref([])
-
-// Watch both text boxes for any changes
-watch([leftText, rightText], ([newLeft, newRight]) => {
-  if (!newLeft && !newRight) {
-    diffResult.value = []
-    return
-  }
-
-  const rawDifferences = diffWordsWithSpace(newLeft || '', newRight || '')
-  processedDiff.value = processDiff(rawDifferences)
-})
-
-const processDiff = (rawDiff) => {
-  const processed = []
-  for (let i = 0; i < rawDiff.length; i++) {
-    const current = rawDiff[i]
-    const next = rawDiff[i + 1]
-
-    // Check for a replacement pattern (removed followed by added)
-    if (current.removed && next && next.added) {
-      processed.push({
-        isReplacement: true,
-        removed: current,
-        added: next
-      })
-      i++
-    } 
-    // Standard standalone token
-    else {
-      processed.push({
-        isReplacement: false,
-        ...current
-      })
-    }
-  }
-  return processed
-}
-
-// Helper to separate a word from its trailing spaces/newlines
-const splitWhitespace = (text) => {
-  const match = text.match(/^([\s\S]*?)(\s*)$/)
-  return {
-    word: match[1],
-    space: match[2]
-  }
-}
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
@@ -180,29 +134,43 @@ const pasteText = async (targetPanel) => {
             </button>
           </div>
         </div>
-        <div v-if="isDiffEnabled" class="content-display">
-          <template v-for="(block, index) in processedDiff" :key="'right-' + index">
-            <span v-if="block.isReplacement" class="replacement-grid">
-              <span class="ghost-layer">
-                <span>{{ splitWhitespace(block.removed.value).word }}</span>
-                <span>{{ splitWhitespace(block.removed.value).space }}</span>
+        <div 
+          v-if="isDiffEnabled" 
+          class="content-display"
+          contenteditable="true"
+          spellcheck="false"
+          @input="handleEdit($event, 'right')"
+          @keydown="handleKeyDown($event, 'right')"
+          @paste="handlePaste($event, 'right')"
+        >
+          <span :key="rightUpdateKey">
+            <template v-for="(block, index) in processedDiff" :key="'right-' + index">
+              
+              <span v-if="block.isReplacement" class="replacement-grid">
+                <span class="ghost-layer" contenteditable="false">
+                  <span>{{ splitWhitespace(block.removed.value).word }}</span>
+                  <span>{{ splitWhitespace(block.removed.value).space }}</span>
+                </span>
+                <span class="visible-layer">
+                  <span class="highlight-added">{{ splitWhitespace(block.added.value).word }}</span>
+                  <span>{{ splitWhitespace(block.added.value).space }}</span>
+                </span>
+                <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
-              <span class="visible-layer">
-                <span class="highlight-added">{{ splitWhitespace(block.added.value).word }}</span>
-                <span>{{ splitWhitespace(block.added.value).space }}</span>
+              
+              <span v-else-if="block.removed" contenteditable="false">
+                <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
+                <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
               </span>
-              <span class="filler-layer dotted-bg"></span>
-            </span>
-            <span v-else-if="block.removed">
-              <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
-              <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
-            </span>
-            <span v-else>
-              <span :class="{ 'highlight-added': block.added }">{{ splitWhitespace(block.value).word }}</span>
-              <span>{{ splitWhitespace(block.value).space }}</span>
-            </span>
-          </template>
-          <span v-if="!rightText" class="placeholder">Modified ...</span>
+              
+              <span v-else>
+                <span :class="{ 'highlight-added': block.added }">{{ splitWhitespace(block.value).word }}</span>
+                <span>{{ splitWhitespace(block.value).space }}</span>
+              </span>
+              
+            </template>
+          </span>
+          <span v-if="!rightText" class="placeholder" contenteditable="false">Modified ...</span>
         </div>
         <textarea 
           v-else 
