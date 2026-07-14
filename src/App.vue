@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useDiffEngine } from './composables/useDiffEngine'
 
 // Use the diff engine composable to manage state and logic related to text comparison
@@ -17,6 +17,25 @@ const {
 
 // State for notification
 const notification = ref('')
+const isDarkMode = ref(true)
+
+// Toggle theme
+const toggleTheme = () => {
+  isDarkMode.value = !isDarkMode.value
+  const newTheme = isDarkMode.value ? 'dark' : 'light'
+  
+  // Apply to HTML tag
+  document.documentElement.setAttribute('data-theme', newTheme)
+  // Save the user's choice to their browser
+  localStorage.setItem('theme', newTheme)
+}
+
+// Initialize theme based on saved preference or default to dark mode
+onMounted(() => {
+  const savedTheme = localStorage.getItem('theme') || 'dark'
+  isDarkMode.value = savedTheme === 'dark'
+  document.documentElement.setAttribute('data-theme', savedTheme)
+})
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
@@ -64,6 +83,9 @@ const pasteText = async (targetPanel) => {
           <input type="checkbox" v-model="isDiffEnabled">
           <span class="slider"></span>
         </label>
+        <button class="icon-btn theme-toggle" title="Toggle Theme" @click="toggleTheme">
+          <img src="./assets/light-dark-mode.svg" alt="Theme Icon" />
+        </button>
       </div>
     </header>
     <div class="panels-container">
@@ -71,13 +93,12 @@ const pasteText = async (targetPanel) => {
         <div class="toolbar">
           <span class="label">Original Text</span>
           <div class="actions">
-            <!-- Copy button is currently disabled for the left panel -->
-            <!-- <button class="icon-btn" title="Copy Text" @click="copyText(leftText)">
+            <button class="icon-btn" title="Copy Text" @click="copyText(leftText)">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
-            </button> -->
+            </button>
             <button class="icon-btn" title="Paste Text" @click="pasteText('left')">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
