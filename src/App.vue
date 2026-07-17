@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useDiffEngine } from './composables/useDiffEngine'
 
 // Use the diff engine composable to manage state and logic related to text comparison
@@ -17,7 +17,10 @@ const {
 
 // State for notification
 const notification = ref('')
+// State for theme
 const isDarkMode = ref(true)
+// Computed property to determine if the diff view should be shown
+const showDiff = computed(() => isDiffEnabled.value && leftText.value && rightText.value)
 
 // Toggle theme
 const toggleTheme = () => {
@@ -65,6 +68,13 @@ const pasteText = async (targetPanel) => {
     console.error('Failed to read clipboard: ', err)
   }
 }
+
+// Clear function
+const clearText = (targetPanel) => {
+  if (targetPanel === 'left') leftText.value = ''
+  if (targetPanel === 'right') rightText.value = ''
+}
+
 </script>
 
 <template>
@@ -105,9 +115,23 @@ const pasteText = async (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
+            <button class="icon-btn" title="Clear Text" @click="clearText('left')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
           </div>
         </div>
-        <div v-if="isDiffEnabled" class="content-display">
+        <div 
+          v-if="showDiff" 
+          class="content-display"
+          :contenteditable="!leftText"
+          spellcheck="false"
+          @input="handleEdit($event, 'left')"
+          @keydown="handleKeyDown($event, 'left')"
+          @paste="handlePaste($event, 'left')"
+        >
           <template v-for="(block, index) in processedDiff" :key="'left-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
               <span class="ghost-layer">
@@ -129,13 +153,19 @@ const pasteText = async (targetPanel) => {
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
           </template>
-          <span v-if="!leftText" class="placeholder">Original ...</span>
         </div>
         <textarea 
           v-else 
-          v-model="leftText" 
-          placeholder="Original ..."
+          v-model="leftText"
         ></textarea>
+        <div v-if="!leftText" class="empty-overlay">
+        <button class="big-paste-btn" @click="pasteText('left')">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          </svg>
+        </button>
+      </div>
       </div>
       <div class="panel">
         <div class="toolbar">
@@ -153,10 +183,16 @@ const pasteText = async (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
+            <button class="icon-btn" title="Clear Text" @click="clearText('right')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
           </div>
         </div>
         <div 
-          v-if="isDiffEnabled" 
+          v-if="showDiff" 
           class="content-display"
           contenteditable="true"
           spellcheck="false"
@@ -191,13 +227,19 @@ const pasteText = async (targetPanel) => {
               
             </template>
           </span>
-          <span v-if="!rightText" class="placeholder" contenteditable="false">Modified ...</span>
         </div>
         <textarea 
           v-else 
-          v-model="rightText" 
-          placeholder="Modified ..."
+          v-model="rightText"
         ></textarea>
+        <div v-if="!rightText" class="empty-overlay">
+          <button class="big-paste-btn" @click="pasteText('right')">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
