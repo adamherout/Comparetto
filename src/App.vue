@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useDiffEngine } from './composables/useDiffEngine'
 import { useDiffTooltip } from './composables/useDiffTooltip'
 
@@ -18,12 +18,26 @@ const {
 
 // Use the diff tooltip composable to manage state and logic related to the floating tooltip
 const {
+  isHoverEnabled,
   tooltip,
   showTooltip,
   hideTooltip,
   cancelHideTooltip,
   revertChange
 } = useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKey)
+
+// State for menu expansion, initialized from local storage
+const isMenuExpanded = ref(localStorage.getItem('menuExpanded') !== 'false')
+
+// Watcher to persist menu expansion state to local storage whenever it changes
+watch(isMenuExpanded, (val) => {
+  localStorage.setItem('menuExpanded', val)
+})
+
+// Toggle menu
+const toggleMenu = () => {
+  isMenuExpanded.value = !isMenuExpanded.value
+}
 
 // State for notification
 const notification = ref('')
@@ -110,18 +124,48 @@ const clearText = (targetPanel) => {
   <div class="workspace">
     <header class="header">
       <h1>Comparetto</h1>
-      <div class="toggle-container">
-        <span class="toggle-label">Toggle Diff</span>
-        <label class="switch">
-          <input type="checkbox" v-model="isDiffEnabled">
-          <span class="slider"></span>
-        </label>
-        <button class="icon-btn theme-toggle" title="Toggle Theme" @click="toggleTheme">
-          <img src="./assets/light-dark-mode.svg" alt="Theme Icon" />
+      
+      <div class="header-controls">
+        <!-- The sliding container for the tools -->
+        <div class="menu-items" :class="{ 'is-expanded': isMenuExpanded }">
+          
+          <span class="toggle-label">Hover</span>
+          <label class="switch">
+            <input type="checkbox" v-model="isHoverEnabled">
+            <span class="slider"></span>
+          </label>
+
+          <span class="toggle-label">Diff</span>
+          <label class="switch">
+            <input type="checkbox" v-model="isDiffEnabled">
+            <span class="slider"></span>
+          </label>
+          
+          <button class="icon-btn theme-toggle" title="Toggle Theme" @click="toggleTheme">
+            <img src="./assets/light-dark-mode.svg" alt="Theme Icon" />
+          </button>
+
+        </div>
+
+        <!-- The Expand/Collapse Toggle Button -->
+        <button 
+          class="icon-btn menu-toggle" 
+          @click="toggleMenu" 
+          :title="isMenuExpanded ? 'Collapse Menu' : 'Expand Menu'"
+        >
+          <!-- Show ">" (Collapse Right) when expanded -->
+          <svg v-if="isMenuExpanded" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <!-- Show "<" (Expand Left) when collapsed -->
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
         </button>
       </div>
+      
     </header>
-    <div class="panels-container">
+    <div class="panels-container" :class="{ 'interactive-hovers': isHoverEnabled }">
       <div class="panel">
         <div class="toolbar">
           <span class="label">Original Text</span>

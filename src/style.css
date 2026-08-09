@@ -434,6 +434,54 @@ textarea {
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.interactive-hovers .highlight-removed {
+  cursor: pointer;
+}
+
+.interactive-hovers .highlight-removed:hover {
+  background-color: var(--diff-removed-text);
+  color: var(--bg-panel);
+}
+
+.interactive-hovers .highlight-added {
+  cursor: pointer;
+}
+
+.interactive-hovers .highlight-added:hover {
+  background-color: var(--diff-added-text);
+  color: var(--bg-panel);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.menu-items {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 0;
+  opacity: 0;
+  margin-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.3s ease, 
+              margin-right 0.3s ease;
+}
+
+.menu-items.is-expanded {
+  max-width: 600px;
+  opacity: 1;
+  margin-right: 1rem;
+}
+
+.menu-toggle {
+  flex-shrink: 0;
+}
+
 @media (max-width: 1000px) {
   .panels-container {
     flex-direction: column;
