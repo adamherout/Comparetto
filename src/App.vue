@@ -75,6 +75,104 @@ const clearText = (targetPanel) => {
   if (targetPanel === 'right') rightText.value = ''
 }
 
+// Reactive state for the floating tooltip
+const tooltip = ref({
+  visible: false,
+  text: '',
+  panel: '',
+  targetIndex: null,
+  top: '0px',
+  left: '0px'
+})
+
+let hideTimeout = null
+
+// Helper to extract exactly what the left side should look like
+const getLeftText = (block) => {
+  if (block.isReplacement) return block.removed.value
+  if (block.removed) return block.value
+  if (block.added) return ''
+  return block.value
+}
+
+// Helper to extract exactly what the right side should look like
+const getRightText = (block) => {
+  if (block.isReplacement) return block.added.value
+  if (block.removed) return ''
+  if (block.added) return block.value
+  return block.value
+}
+
+const revertChange = () => {
+  const targetIndex = tooltip.value.targetIndex
+  const panel = tooltip.value.panel
+  if (targetIndex === null) return
+
+  const block = processedDiff.value[targetIndex]
+  if (!block.isReplacement && !block.added && !block.removed) return
+
+  // Update the left or right text based on which panel was clicked
+  if (panel === 'left') {
+    const newLeftText = processedDiff.value.map((b, i) => 
+      i === targetIndex ? getRightText(b) : getLeftText(b)
+    ).join('')
+    leftText.value = newLeftText
+  } 
+  else if (panel === 'right') {
+    const newRightText = processedDiff.value.map((b, i) => 
+      i === targetIndex ? getLeftText(b) : getRightText(b)
+    ).join('')
+    rightText.value = newRightText
+    rightUpdateKey.value++ 
+  }
+ 
+  // Hide the tooltip after reverting the change
+  hideTooltip(true)
+}
+
+// Triggered when hovering over a highlighted word
+const showTooltip = (event, block, panel, index) => {
+  if (!block.isReplacement && !block.added && !block.removed) return
+
+  clearTimeout(hideTimeout)
+
+  tooltip.value.panel = panel
+  tooltip.value.targetIndex = index
+  
+  // Set the text to show what you are changing it to
+  if (block.isReplacement) {
+    tooltip.value.text = panel === 'left' ? block.added.value : block.removed.value
+  } else if (block.removed && panel === 'left') {
+    tooltip.value.text = '(Remove)'
+  } else if (block.added && panel === 'right') {
+    tooltip.value.text = '(Remove)'
+  } else {
+    return
+  }
+
+  const rect = event.currentTarget.getBoundingClientRect()
+  tooltip.value.left = `${rect.left + (rect.width / 2) + window.scrollX}px`
+  tooltip.value.top = `${rect.top + window.scrollY - 6}px`
+  tooltip.value.visible = true
+}
+
+// Adds a small delay before hiding, allowing the mouse to reach the tooltip
+const hideTooltip = (immediate = false) => {
+  clearTimeout(hideTimeout)
+  if (immediate) {
+    tooltip.value.visible = false
+  } else {
+    hideTimeout = setTimeout(() => {
+      tooltip.value.visible = false
+    }, 500) // 500ms grace period
+  }
+}
+
+// Triggered when hovering the tooltip itself to keep it open
+const cancelHideTooltip = () => {
+  clearTimeout(hideTimeout)
+}
+
 </script>
 
 <template>
@@ -83,6 +181,20 @@ const clearText = (targetPanel) => {
       {{ notification }}
     </div>
   </Transition>
+
+  <div 
+    class="diff-tooltip" 
+    :class="[
+      tooltip.panel === 'left' ? 'tooltip-added' : 'tooltip-removed',
+      { 'is-visible': tooltip.visible }
+    ]"
+    :style="{ top: tooltip.top, left: tooltip.left }"
+    @mouseenter="cancelHideTooltip"
+    @mouseleave="hideTooltip()"
+    @click="revertChange"
+  >
+    {{ splitWhitespace(tooltip.text).word }}
+  </div>
 
   <div class="workspace">
     <header class="header">
@@ -139,8 +251,11 @@ const clearText = (targetPanel) => {
                 <span>{{ splitWhitespace(block.added.value).space }}</span>
               </span>
               <span class="visible-layer">
-                <span class="highlight-removed">{{ splitWhitespace(block.removed.value).word }}</span>
-                <span>{{ splitWhitespace(block.removed.value).space }}</span>
+                <span 
+                  class="highlight-removed"
+                  @mouseenter="showTooltip($event, block, 'left', index)"
+                  @mouseleave="hideTooltip()"
+                >{{ splitWhitespace(block.removed.value).word }}</span>
               </span>
               <span class="filler-layer dotted-bg"></span>
             </span>
@@ -148,8 +263,16 @@ const clearText = (targetPanel) => {
               <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
               <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
             </span>
+            <span v-else-if="block.removed">
+              <span 
+                class="highlight-removed"
+                @mouseenter="showTooltip($event, block, 'left', index)"
+                @mouseleave="hideTooltip()"
+              >{{ splitWhitespace(block.value).word }}</span>
+              <span>{{ splitWhitespace(block.value).space }}</span>
+            </span>
             <span v-else>
-              <span :class="{ 'highlight-removed': block.removed }">{{ splitWhitespace(block.value).word }}</span>
+              <span>{{ splitWhitespace(block.value).word }}</span>
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
           </template>
@@ -202,29 +325,37 @@ const clearText = (targetPanel) => {
         >
           <span :key="rightUpdateKey">
             <template v-for="(block, index) in processedDiff" :key="'right-' + index">
-              
               <span v-if="block.isReplacement" class="replacement-grid">
                 <span class="ghost-layer" contenteditable="false">
                   <span>{{ splitWhitespace(block.removed.value).word }}</span>
                   <span>{{ splitWhitespace(block.removed.value).space }}</span>
                 </span>
                 <span class="visible-layer">
-                  <span class="highlight-added">{{ splitWhitespace(block.added.value).word }}</span>
+                  <span 
+                    class="highlight-added"
+                    @mouseenter="showTooltip($event, block, 'right', index)"
+                    @mouseleave="hideTooltip()"
+                  >{{ splitWhitespace(block.added.value).word }}</span>
                   <span>{{ splitWhitespace(block.added.value).space }}</span>
                 </span>
                 <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
-              
               <span v-else-if="block.removed" contenteditable="false">
                 <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
                 <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
               </span>
-              
-              <span v-else>
-                <span :class="{ 'highlight-added': block.added }">{{ splitWhitespace(block.value).word }}</span>
+              <span v-else-if="block.added">
+                <span 
+                  class="highlight-added"
+                  @mouseenter="showTooltip($event, block, 'right', index)"
+                  @mouseleave="hideTooltip()"
+                >{{ splitWhitespace(block.value).word }}</span>
                 <span>{{ splitWhitespace(block.value).space }}</span>
               </span>
-              
+              <span v-else>
+                <span>{{ splitWhitespace(block.value).word }}</span>
+                <span>{{ splitWhitespace(block.value).space }}</span>
+              </span>
             </template>
           </span>
         </div>
