@@ -352,6 +352,136 @@ textarea {
   user-select: none;
 }
 
+.diff-tooltip {
+  position: absolute;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  cursor: pointer;
+  z-index: 9999;
+  white-space: pre-wrap;
+  transform: translate(-50%, -100%);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.diff-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
+}
+
+.diff-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.diff-tooltip.tooltip-added {
+  background-color: var(--diff-added-bg);
+  color: var(--diff-added-text);
+  border: 1px solid var(--diff-added-text);
+}
+
+.diff-tooltip.tooltip-added:hover {
+  background-color: var(--diff-added-text);
+  color: var(--bg-panel);
+}
+
+.diff-tooltip.tooltip-removed {
+  background-color: var(--diff-removed-bg);
+  color: var(--diff-removed-text);
+  border: 1px solid var(--diff-removed-text);
+}
+
+.diff-tooltip.tooltip-removed:hover {
+  background-color: var(--diff-removed-text);
+  color: var(--bg-panel);
+}
+
+.diff-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+}
+
+.diff-tooltip.tooltip-added::after {
+  border-color: var(--diff-added-text) transparent transparent transparent;
+}
+
+.diff-tooltip.tooltip-removed::after {
+  border-color: var(--diff-removed-text) transparent transparent transparent;
+}
+
+.highlight-removed {
+  background-color: var(--diff-removed-bg);
+  color: var(--diff-removed-text);
+  border-radius: 3px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.interactive-hovers .highlight-removed {
+  cursor: pointer;
+}
+
+.interactive-hovers .highlight-removed:hover {
+  background-color: var(--diff-removed-text);
+  color: var(--bg-panel);
+}
+
+.interactive-hovers .highlight-added {
+  cursor: pointer;
+}
+
+.interactive-hovers .highlight-added:hover {
+  background-color: var(--diff-added-text);
+  color: var(--bg-panel);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.menu-items {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 0;
+  opacity: 0;
+  margin-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.3s ease, 
+              margin-right 0.3s ease;
+}
+
+.menu-items.is-expanded {
+  max-width: 600px;
+  opacity: 1;
+  margin-right: 1rem;
+}
+
+.menu-toggle {
+  flex-shrink: 0;
+}
+
 @media (max-width: 1000px) {
   .panels-container {
     flex-direction: column;
