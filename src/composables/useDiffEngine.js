@@ -30,13 +30,37 @@ export function useDiffEngine() {
 
       // Check for a replacement pattern (removed followed by added)
       if (current.removed && next && next.added) {
-        processed.push({
-          isReplacement: true,
-          removed: current,
-          added: next
-        })
-        i++
-      } 
+        
+        // Split the large strings into arrays of individual words
+        const removedTokens = current.value.match(/\S+\s*|\s+/g) || []
+        const addedTokens = next.value.match(/\S+\s*|\s+/g) || []
+        
+        // Find out which string is longer so we don't leave any words behind
+        const maxLength = Math.max(removedTokens.length, addedTokens.length)
+        
+        // Pair up the removed and added words
+        for (let j = 0; j < maxLength; j++) {
+          const r = removedTokens[j]
+          const a = addedTokens[j]
+          
+          if (r && a) {
+            // Both removed and added words exist, render as a replacement
+            processed.push({
+              isReplacement: true,
+              removed: { value: r, removed: true },
+              added: { value: a, added: true }
+            })
+          } else if (r) {
+            // Leftover removed words, render as standard removed text
+            processed.push({ isReplacement: false, value: r, removed: true })
+          } else if (a) {
+            // Leftover added words, render as standard added text
+            processed.push({ isReplacement: false, value: a, added: true })
+          }
+        }
+        
+        i++ // Skip the next block
+      }
       // Standard standalone token
       else {
         processed.push({
