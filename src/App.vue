@@ -13,7 +13,8 @@ const {
   splitWhitespace, 
   handleEdit,
   handleKeyDown,
-  handlePaste
+  handlePaste,
+  rightContainer
 } = useDiffEngine()
 
 // Use the diff tooltip composable to manage state and logic related to the floating tooltip
@@ -23,8 +24,24 @@ const {
   showTooltip,
   hideTooltip,
   cancelHideTooltip,
-  revertChange
-} = useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKey)
+  revertChange,
+  previewIndex,
+  startPreview,
+  endPreview,
+  applyChange
+} = useDiffTooltip(processedDiff, rightText, rightUpdateKey)
+
+// True while the original panel is offering this block
+const isPreviewing = (index) => previewIndex.value === index
+
+// While previewing, the modified panel shows the original wording and the
+// hidden sizing layer holds the modified wording, so the two swap places and
+// the block keeps its width either way
+const shownText = (block, index) =>
+  isPreviewing(index) ? block.removed.value : block.added.value
+
+const ghostText = (block, index) =>
+  isPreviewing(index) ? block.added.value : block.removed.value
 
 // State for menu expansion, initialized from local storage
 const isMenuExpanded = ref(localStorage.getItem('menuExpanded') !== 'false')
@@ -108,11 +125,8 @@ const clearText = (targetPanel) => {
   </Transition>
 
   <div 
-    class="diff-tooltip" 
-    :class="[
-      tooltip.panel === 'left' ? 'tooltip-added' : 'tooltip-removed',
-      { 'is-visible': tooltip.visible }
-    ]"
+    class="diff-tooltip tooltip-removed" 
+    :class="{ 'is-visible': tooltip.visible }"
     :style="{ top: tooltip.top, left: tooltip.left }"
     @mouseenter="cancelHideTooltip"
     @mouseleave="hideTooltip()"
@@ -182,10 +196,10 @@ const clearText = (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-            <button class="icon-btn" title="Clear Text" @click="clearText('left')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <button class="icon-btn clear-btn" title="Clear Text" @click="clearText('left')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
@@ -193,11 +207,8 @@ const clearText = (targetPanel) => {
         <div 
           v-if="showDiff" 
           class="content-display"
-          :contenteditable="!leftText"
+          contenteditable="false"
           spellcheck="false"
-          @input="handleEdit($event, 'left')"
-          @keydown="handleKeyDown($event, 'left')"
-          @paste="handlePaste($event, 'left')"
         >
           <template v-for="(block, index) in processedDiff" :key="'left-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
@@ -208,21 +219,28 @@ const clearText = (targetPanel) => {
               <span class="visible-layer">
                 <span 
                   class="highlight-removed"
-                  @mouseenter="showTooltip($event, block, 'left', index)"
-                  @mouseleave="hideTooltip()"
+                  @mouseenter="startPreview(block, index)"
+                  @mouseleave="endPreview()"
+                  @click="applyChange(index)"
                 >{{ splitWhitespace(block.removed.value).word }}</span>
               </span>
               <span class="filler-layer dotted-bg"></span>
             </span>
             <span v-else-if="block.added">
-              <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
+              <span 
+                class="dotted-bg ghost-text"
+                @mouseenter="startPreview(block, index)"
+                @mouseleave="endPreview()"
+                @click="applyChange(index)"
+              >{{ splitWhitespace(block.value).word }}</span>
               <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
             </span>
             <span v-else-if="block.removed">
               <span 
                 class="highlight-removed"
-                @mouseenter="showTooltip($event, block, 'left', index)"
-                @mouseleave="hideTooltip()"
+                @mouseenter="startPreview(block, index)"
+                @mouseleave="endPreview()"
+                @click="applyChange(index)"
               >{{ splitWhitespace(block.value).word }}</span>
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
@@ -261,16 +279,17 @@ const clearText = (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-            <button class="icon-btn" title="Clear Text" @click="clearText('right')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <button class="icon-btn clear-btn" title="Clear Text" @click="clearText('right')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
         </div>
         <div 
           v-if="showDiff" 
+          ref="rightContainer"
           class="content-display"
           contenteditable="true"
           spellcheck="false"
@@ -282,27 +301,33 @@ const clearText = (targetPanel) => {
             <template v-for="(block, index) in processedDiff" :key="'right-' + index">
               <span v-if="block.isReplacement" class="replacement-grid">
                 <span class="ghost-layer" contenteditable="false">
-                  <span>{{ splitWhitespace(block.removed.value).word }}</span>
-                  <span>{{ splitWhitespace(block.removed.value).space }}</span>
+                  <span>{{ splitWhitespace(ghostText(block, index)).word }}</span>
+                  <span>{{ splitWhitespace(ghostText(block, index)).space }}</span>
                 </span>
                 <span class="visible-layer">
                   <span 
-                    class="highlight-added"
-                    @mouseenter="showTooltip($event, block, 'right', index)"
+                    :class="isPreviewing(index) ? 'preview-incoming' : 'highlight-added'"
+                    @mouseenter="showTooltip($event, block, index)"
                     @mouseleave="hideTooltip()"
-                  >{{ splitWhitespace(block.added.value).word }}</span>
-                  <span>{{ splitWhitespace(block.added.value).space }}</span>
+                  >{{ splitWhitespace(shownText(block, index)).word }}</span>
+                  <span>{{ splitWhitespace(shownText(block, index)).space }}</span>
                 </span>
                 <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
               <span v-else-if="block.removed" contenteditable="false">
-                <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
+                <span 
+                  class="dotted-bg ghost-text"
+                  :class="{ 'preview-restore': isPreviewing(index) }"
+                  @mouseenter="showTooltip($event, block, index)"
+                  @mouseleave="hideTooltip()"
+                >{{ splitWhitespace(block.value).word }}</span>
                 <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
               </span>
               <span v-else-if="block.added">
                 <span 
                   class="highlight-added"
-                  @mouseenter="showTooltip($event, block, 'right', index)"
+                  :class="{ 'preview-delete': isPreviewing(index) }"
+                  @mouseenter="showTooltip($event, block, index)"
                   @mouseleave="hideTooltip()"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span>{{ splitWhitespace(block.value).space }}</span>
