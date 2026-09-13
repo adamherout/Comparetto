@@ -1,4 +1,4 @@
-import { ref, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { diffWordsWithSpace } from 'diff'
 
 export function useDiffEngine() {
@@ -21,13 +21,18 @@ export function useDiffEngine() {
     }
   }
 
-  // Grouping parameters for how we treat similar words and replacements
+  // -------------------------------------------------------------------------
+  // Grouping tunables: adjust these to change how aggressively neighbouring
+  // changes get merged into a single highlight.
+  // -------------------------------------------------------------------------
   const GROUPING = {
-    // Minimum similarity score for two words to be considered a match
+    // How similar two words must be to be treated as "the same word, edited"
+    // rather than being absorbed into a larger group. 0 = never, 1 = identical.
     similarityThreshold: 0.4,
-    // Maximum number of tokens in a group before we stop trying to find anchors
+    // Largest group we are willing to show as one replacement. Anything bigger
+    // falls back to word-by-word pairing so a single highlight never runs away.
     maxGroupTokens: 6,
-    // Maximum number of token pairs to consider when searching for anchors
+    // Skip the (quadratic) anchor search when a block pair is this large
     maxSearchArea: 2500
   }
 
@@ -51,14 +56,17 @@ export function useDiffEngine() {
     return (2 * hits) / ((x.length - 1) + (y.length - 1))
   }
 
-  // How much of the two words overlaps, as a prefix
+  // How much of the two words is a shared opening, which is what separates an
+  // edited word from an unrelated one that happens to reuse a few letters
   const prefixRatio = (x, y) => {
     let shared = 0
     while (shared < x.length && shared < y.length && x[shared] === y[shared]) shared++
     return shared / Math.max(x.length, y.length)
   }
 
-  // A combined similarity score that averages the Dice coefficient and prefix ratio
+  // Score for "these two words are the same word, edited" ("colour" vs "color",
+  // "runs" vs "running"). Bigrams alone are too generous: "clever" and "very"
+  // share ve and er and would score 0.5, so the shared opening is weighed in too.
   const similarity = (a, b) => {
     const x = a.trim().toLowerCase()
     const y = b.trim().toLowerCase()
@@ -71,7 +79,7 @@ export function useDiffEngine() {
   }
 
   // Find pairs of words that clearly correspond to each other. These act as
-  // pins, everything between two pins is free to collapse into one group.
+  // pins: everything between two pins is free to collapse into one group.
   const findAnchors = (removedTokens, addedTokens) => {
     if (removedTokens.length * addedTokens.length > GROUPING.maxSearchArea) return []
 
@@ -83,7 +91,7 @@ export function useDiffEngine() {
       }
     }
 
-    // Best matches win, ties go to the pair that moved the least
+    // Best matches win; ties go to the pair that moved the least
     candidates.sort((a, b) =>
       b.score - a.score || (Math.abs(a.i - a.j) - Math.abs(b.i - b.j))
     )
@@ -116,7 +124,7 @@ export function useDiffEngine() {
         segments.push({ removed: gapRemoved, added: gapAdded })
       }
 
-      // The anchor itself is a single token on each side, which we treat as a replacement
+      // The anchor itself stays a tidy one-to-one pair
       segments.push({
         removed: [removedTokens[anchor.i]],
         added: [addedTokens[anchor.j]]
@@ -135,11 +143,11 @@ export function useDiffEngine() {
     return segments
   }
 
-  // A group containing a line break would break the inline grid rendering,
+  // A group containing a line break would break the inline-grid rendering,
   // so those are always left ungrouped
   const hasInnerNewline = (value) => value.replace(/\s+$/, '').includes('\n')
 
-  // The original word by word pairing, kept as a fallback for awkward segments
+  // The original word-by-word pairing, kept as a fallback for awkward segments
   const zipTokens = (removedTokens, addedTokens, output) => {
     const maxLength = Math.max(removedTokens.length, addedTokens.length)
 
@@ -164,7 +172,7 @@ export function useDiffEngine() {
     }
   }
 
-  // Turn one aligned segment into render ready blocks
+  // Turn one aligned segment into render-ready blocks
   const emitSegment = (segment, output) => {
     const removedValue = segment.removed.join('')
     const addedValue = segment.added.join('')
@@ -334,6 +342,115 @@ export function useDiffEngine() {
     }
   }
 
+  // Undo/redo history management
+  const HISTORY = {
+    // How long to wait after the last edit before committing a new history entry
+    debounceMs: 500,
+    // Cap so a long session cannot grow without bound
+    maxEntries: 100
+  }
+
+  // Element of the modified panel, used to put the caret back after a jump
+  const rightContainer = ref(null)
+
+  const history = ref([{ left: '', right: '', caret: null }])
+  const historyIndex = ref(0)
+
+  const canUndo = computed(() => historyIndex.value > 0)
+  const canRedo = computed(() => historyIndex.value < history.value.length - 1)
+
+  // Where the caret was after the last edit in the modified panel. The edit
+  // handlers already work this out, so it is recorded rather than remeasured.
+  let lastRightCaret = null
+  let isTimeTravelling = false
+  let commitTimeout = null
+
+  // Turn the current text into an undo step
+  const commitHistory = () => {
+    clearTimeout(commitTimeout)
+
+    const current = history.value[historyIndex.value]
+    if (current && current.left === leftText.value && current.right === rightText.value) return
+
+    // Anything that was undone is discarded as soon as a new edit lands
+    const trimmed = history.value.slice(0, historyIndex.value + 1)
+    trimmed.push({ left: leftText.value, right: rightText.value, caret: lastRightCaret })
+
+    if (trimmed.length > HISTORY.maxEntries) trimmed.shift()
+
+    history.value = trimmed
+    historyIndex.value = trimmed.length - 1
+
+    // Only reuse a caret for the edit that produced it
+    lastRightCaret = null
+  }
+
+  // Every change schedules a commit, rapid changes keep pushing it back
+  watch([leftText, rightText], () => {
+    if (isTimeTravelling) return
+    clearTimeout(commitTimeout)
+    commitTimeout = setTimeout(commitHistory, HISTORY.debounceMs)
+  })
+
+  const travelTo = async (index) => {
+    const entry = history.value[index]
+    if (!entry) return
+
+    clearTimeout(commitTimeout)
+    isTimeTravelling = true
+
+    historyIndex.value = index
+    leftText.value = entry.left
+    rightText.value = entry.right
+
+    // Force Vue to destroy and rebuild the grid
+    rightUpdateKey.value++
+
+    await nextTick()
+    isTimeTravelling = false
+
+    // Typing steps remember their caret; button and tooltip steps do not
+    if (entry.caret !== null && rightContainer.value) {
+      rightContainer.value.focus()
+      restoreCaret(rightContainer.value, entry.caret)
+    }
+  }
+
+  const undo = () => {
+    // Fold any typing that has not settled yet into the stack first, so the
+    // first Ctrl+Z undoes what was just typed rather than skipping past it
+    commitHistory()
+    if (canUndo.value) travelTo(historyIndex.value - 1)
+  }
+
+  const redo = () => {
+    commitHistory()
+    if (canRedo.value) travelTo(historyIndex.value + 1)
+  }
+
+  // Ctrl+Z / Cmd+Z to undo, Ctrl+Shift+Z, Cmd+Shift+Z or Ctrl+Y to redo.
+  // The browser's own undo is suppressed because it knows nothing about the
+  // rebuilt panel and would fight this stack.
+  const handleShortcut = (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+
+    const key = event.key.toLowerCase()
+
+    if (key === 'z' && !event.shiftKey) {
+      event.preventDefault()
+      undo()
+    } else if ((key === 'z' && event.shiftKey) || key === 'y') {
+      event.preventDefault()
+      redo()
+    }
+  }
+
+  onMounted(() => window.addEventListener('keydown', handleShortcut))
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', handleShortcut)
+    clearTimeout(commitTimeout)
+  })
+
   // Handler for keydown events in the contenteditable panels for Enter and Backspace
   const handleKeyDown = async (event, targetPanel) => {
     if (event.key !== 'Enter' && event.key !== 'Backspace') return // Ignore normal typing
@@ -367,7 +484,10 @@ export function useDiffEngine() {
     }
 
     // Force Vue to destroy and rebuild the grid
-    if (targetPanel === 'right') rightUpdateKey.value++
+    if (targetPanel === 'right') {
+      rightUpdateKey.value++
+      lastRightCaret = newCursorPos
+    }
 
     // Wait for the redraw, then put the cursor back
     await nextTick()
@@ -394,7 +514,10 @@ export function useDiffEngine() {
     textRef.value = currentText.slice(0, start) + pastedText + currentText.slice(end)
 
     // Force Vue to destroy and rebuild the grid
-    if (targetPanel === 'right') rightUpdateKey.value++
+    if (targetPanel === 'right') {
+      rightUpdateKey.value++
+      lastRightCaret = start + pastedText.length
+    }
 
     // Wait for the redraw, then put the cursor back
     await nextTick()
@@ -412,6 +535,7 @@ export function useDiffEngine() {
     if (targetPanel === 'right') {
       rightText.value = text
       rightUpdateKey.value++
+      lastRightCaret = start
     }
 
     await nextTick()
@@ -428,6 +552,11 @@ export function useDiffEngine() {
     splitWhitespace,
     handleEdit,
     handleKeyDown,
-    handlePaste
+    handlePaste,
+    rightContainer,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   }
 }

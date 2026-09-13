@@ -13,7 +13,8 @@ const {
   splitWhitespace, 
   handleEdit,
   handleKeyDown,
-  handlePaste
+  handlePaste,
+  rightContainer
 } = useDiffEngine()
 
 // Use the diff tooltip composable to manage state and logic related to the floating tooltip
@@ -33,7 +34,9 @@ const {
 // True while the original panel is offering this block
 const isPreviewing = (index) => previewIndex.value === index
 
-// Determine which text to show in the original panel and which to show in the modified panel
+// While previewing, the modified panel shows the original wording and the
+// hidden sizing layer holds the modified wording, so the two swap places and
+// the block keeps its width either way
 const shownText = (block, index) =>
   isPreviewing(index) ? block.removed.value : block.added.value
 
@@ -193,10 +196,10 @@ const clearText = (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-            <button class="icon-btn" title="Clear Text" @click="clearText('left')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <button class="icon-btn clear-btn" title="Clear Text" @click="clearText('left')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
@@ -276,16 +279,17 @@ const clearText = (targetPanel) => {
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-            <button class="icon-btn" title="Clear Text" @click="clearText('right')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <button class="icon-btn clear-btn" title="Clear Text" @click="clearText('right')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
         </div>
         <div 
           v-if="showDiff" 
+          ref="rightContainer"
           class="content-display"
           contenteditable="true"
           spellcheck="false"
