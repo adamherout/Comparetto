@@ -23,8 +23,22 @@ const {
   showTooltip,
   hideTooltip,
   cancelHideTooltip,
-  revertChange
-} = useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKey)
+  revertChange,
+  previewIndex,
+  startPreview,
+  endPreview,
+  applyChange
+} = useDiffTooltip(processedDiff, rightText, rightUpdateKey)
+
+// True while the original panel is offering this block
+const isPreviewing = (index) => previewIndex.value === index
+
+// Determine which text to show in the original panel and which to show in the modified panel
+const shownText = (block, index) =>
+  isPreviewing(index) ? block.removed.value : block.added.value
+
+const ghostText = (block, index) =>
+  isPreviewing(index) ? block.added.value : block.removed.value
 
 // State for menu expansion, initialized from local storage
 const isMenuExpanded = ref(localStorage.getItem('menuExpanded') !== 'false')
@@ -108,11 +122,8 @@ const clearText = (targetPanel) => {
   </Transition>
 
   <div 
-    class="diff-tooltip" 
-    :class="[
-      tooltip.panel === 'left' ? 'tooltip-added' : 'tooltip-removed',
-      { 'is-visible': tooltip.visible }
-    ]"
+    class="diff-tooltip tooltip-removed" 
+    :class="{ 'is-visible': tooltip.visible }"
     :style="{ top: tooltip.top, left: tooltip.left }"
     @mouseenter="cancelHideTooltip"
     @mouseleave="hideTooltip()"
@@ -193,11 +204,8 @@ const clearText = (targetPanel) => {
         <div 
           v-if="showDiff" 
           class="content-display"
-          :contenteditable="!leftText"
+          contenteditable="false"
           spellcheck="false"
-          @input="handleEdit($event, 'left')"
-          @keydown="handleKeyDown($event, 'left')"
-          @paste="handlePaste($event, 'left')"
         >
           <template v-for="(block, index) in processedDiff" :key="'left-' + index">
             <span v-if="block.isReplacement" class="replacement-grid">
@@ -208,21 +216,28 @@ const clearText = (targetPanel) => {
               <span class="visible-layer">
                 <span 
                   class="highlight-removed"
-                  @mouseenter="showTooltip($event, block, 'left', index)"
-                  @mouseleave="hideTooltip()"
+                  @mouseenter="startPreview(block, index)"
+                  @mouseleave="endPreview()"
+                  @click="applyChange(index)"
                 >{{ splitWhitespace(block.removed.value).word }}</span>
               </span>
               <span class="filler-layer dotted-bg"></span>
             </span>
             <span v-else-if="block.added">
-              <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
+              <span 
+                class="dotted-bg ghost-text"
+                @mouseenter="startPreview(block, index)"
+                @mouseleave="endPreview()"
+                @click="applyChange(index)"
+              >{{ splitWhitespace(block.value).word }}</span>
               <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
             </span>
             <span v-else-if="block.removed">
               <span 
                 class="highlight-removed"
-                @mouseenter="showTooltip($event, block, 'left', index)"
-                @mouseleave="hideTooltip()"
+                @mouseenter="startPreview(block, index)"
+                @mouseleave="endPreview()"
+                @click="applyChange(index)"
               >{{ splitWhitespace(block.value).word }}</span>
               <span>{{ splitWhitespace(block.value).space }}</span>
             </span>
@@ -282,27 +297,33 @@ const clearText = (targetPanel) => {
             <template v-for="(block, index) in processedDiff" :key="'right-' + index">
               <span v-if="block.isReplacement" class="replacement-grid">
                 <span class="ghost-layer" contenteditable="false">
-                  <span>{{ splitWhitespace(block.removed.value).word }}</span>
-                  <span>{{ splitWhitespace(block.removed.value).space }}</span>
+                  <span>{{ splitWhitespace(ghostText(block, index)).word }}</span>
+                  <span>{{ splitWhitespace(ghostText(block, index)).space }}</span>
                 </span>
                 <span class="visible-layer">
                   <span 
-                    class="highlight-added"
-                    @mouseenter="showTooltip($event, block, 'right', index)"
+                    :class="isPreviewing(index) ? 'preview-incoming' : 'highlight-added'"
+                    @mouseenter="showTooltip($event, block, index)"
                     @mouseleave="hideTooltip()"
-                  >{{ splitWhitespace(block.added.value).word }}</span>
-                  <span>{{ splitWhitespace(block.added.value).space }}</span>
+                  >{{ splitWhitespace(shownText(block, index)).word }}</span>
+                  <span>{{ splitWhitespace(shownText(block, index)).space }}</span>
                 </span>
                 <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
               <span v-else-if="block.removed" contenteditable="false">
-                <span class="dotted-bg">{{ splitWhitespace(block.value).word }}</span>
+                <span 
+                  class="dotted-bg ghost-text"
+                  :class="{ 'preview-restore': isPreviewing(index) }"
+                  @mouseenter="showTooltip($event, block, index)"
+                  @mouseleave="hideTooltip()"
+                >{{ splitWhitespace(block.value).word }}</span>
                 <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
               </span>
               <span v-else-if="block.added">
                 <span 
                   class="highlight-added"
-                  @mouseenter="showTooltip($event, block, 'right', index)"
+                  :class="{ 'preview-delete': isPreviewing(index) }"
+                  @mouseenter="showTooltip($event, block, index)"
                   @mouseleave="hideTooltip()"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span>{{ splitWhitespace(block.value).space }}</span>

@@ -1,25 +1,31 @@
 import { ref, watch } from 'vue'
 
-export function useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKey) {
+export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
 
-  // State to enable or disable the hover tooltip feature
+  // State to enable or disable the hover feature
   const isHoverEnabled = ref(localStorage.getItem('hoverFeature') !== 'false')
 
   // Watch for changes to the hover feature state and persist it in localStorage
   watch(isHoverEnabled, (val) => {
     localStorage.setItem('hoverFeature', val)
-    if (!val) hideTooltip(true)
+    if (!val) {
+      hideTooltip(true)
+      previewIndex.value = null
+    }
   })
 
-  // State for the tooltip's visibility, content, and position
+  // State for the tooltip. Only ever raised by the modified panel.
   const tooltip = ref({
     visible: false,
     text: '',
-    panel: '',
     targetIndex: null,
     top: '0px',
     left: '0px'
   })
+
+  // Index of the block the original panel is currently offering. The modified
+  // panel renders that block as the result instead of raising a tooltip.
+  const previewIndex = ref(null)
 
   let hideTimeout = null
 
@@ -38,55 +44,59 @@ export function useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKe
     return block.value
   }
 
-  // Function to revert a change based on the tooltip's target index and panel
-  const revertChange = () => {
-    const targetIndex = tooltip.value.targetIndex
-    const panel = tooltip.value.panel
-    if (targetIndex === null) return
+  // True for any block the user can act on
+  const isChange = (block) =>
+    !!block && (block.isReplacement || block.added || block.removed)
 
-    const block = processedDiff.value[targetIndex]
-    if (!block.isReplacement && !block.added && !block.removed) return
+  // Apply the original's version of one block to the modified panel. This is
+  // the only mutation in the app, and it always targets the right panel.
+  const applyChange = (index) => {
+    if (index === null || index === undefined) return
 
-    // Revert the change by replacing the text in the appropriate panel
-    if (panel === 'left') {
-      const newLeftText = processedDiff.value.map((b, i) => 
-        i === targetIndex ? getRightText(b) : getLeftText(b)
-      ).join('')
-      leftText.value = newLeftText
-    } 
-    else if (panel === 'right') {
-      const newRightText = processedDiff.value.map((b, i) => 
-        i === targetIndex ? getLeftText(b) : getRightText(b)
-      ).join('')
-      rightText.value = newRightText
-      rightUpdateKey.value++ 
-    }
-   
+    const block = processedDiff.value[index]
+    if (!isChange(block)) return
+
+    rightText.value = processedDiff.value
+      .map((b, i) => (i === index ? getLeftText(b) : getRightText(b)))
+      .join('')
+
+    rightUpdateKey.value++
+
+    // The diff has been rebuilt, so the old index means nothing now
+    previewIndex.value = null
     hideTooltip(true)
   }
 
-  // Function to show the tooltip with appropriate content and position based on the hovered block
-  const showTooltip = (event, block, panel, index) => {
+  // Hovering the original panel: show the result on the right instead of
+  // floating a tooltip over the text being hovered
+  const startPreview = (block, index) => {
     if (!isHoverEnabled.value) return
-    if (!block.isReplacement && !block.added && !block.removed) return
+    if (!isChange(block)) return
+    previewIndex.value = index
+  }
+
+  const endPreview = () => {
+    previewIndex.value = null
+  }
+
+  // What the tooltip should say. Only the modified panel raises it, and it
+  // always reveals the original.
+  const getTooltipText = (block) => {
+    if (block.isReplacement) return block.removed.value
+    if (block.removed) return block.value   // hidden behind the dots
+    return '(Remove)'                       // the original never had this
+  }
+
+  // Show the tooltip above the hovered element in the modified panel
+  const showTooltip = (event, block, index) => {
+    if (!isHoverEnabled.value) return
+    if (!isChange(block)) return
 
     clearTimeout(hideTimeout)
 
-    tooltip.value.panel = panel
     tooltip.value.targetIndex = index
+    tooltip.value.text = getTooltipText(block)
 
-    // Determine the tooltip text based on the block type and panel
-    if (block.isReplacement) {
-      tooltip.value.text = panel === 'left' ? block.added.value : block.removed.value
-    } else if (block.removed && panel === 'left') {
-      tooltip.value.text = '(Remove)'
-    } else if (block.added && panel === 'right') {
-      tooltip.value.text = '(Remove)'
-    } else {
-      return
-    }
-
-    // Position the tooltip above the hovered element
     const rect = event.currentTarget.getBoundingClientRect()
     tooltip.value.left = `${rect.left + (rect.width / 2) + window.scrollX}px`
     tooltip.value.top = `${rect.top + window.scrollY - 10}px`
@@ -96,7 +106,7 @@ export function useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKe
   // Function to hide the tooltip, either immediately or after a short delay
   const hideTooltip = (immediate = false) => {
     clearTimeout(hideTimeout)
-    
+
     if (immediate) {
       tooltip.value.visible = false
     } else {
@@ -111,12 +121,19 @@ export function useDiffTooltip(processedDiff, leftText, rightText, rightUpdateKe
     clearTimeout(hideTimeout)
   }
 
+  // Clicking the tooltip applies the change it is describing
+  const revertChange = () => applyChange(tooltip.value.targetIndex)
+
   return {
     isHoverEnabled,
     tooltip,
     showTooltip,
     hideTooltip,
     cancelHideTooltip,
-    revertChange
+    revertChange,
+    previewIndex,
+    startPreview,
+    endPreview,
+    applyChange
   }
 }
