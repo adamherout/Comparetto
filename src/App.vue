@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { usePatchExport } from './composables/usePatchExport'
 import { useDiffEngine } from './composables/useDiffEngine'
 import { useDiffTooltip } from './composables/useDiffTooltip'
 
@@ -34,6 +35,17 @@ const {
   handleRightEnter,
   handleRightLeave
 } = useDiffTooltip(processedDiff, { leftText, rightText, leftUpdateKey, rightUpdateKey })
+
+// Use the patch export composable to manage state and logic related to generating and downloading patches
+const {
+  fileName,
+  isPatchOpen,
+  patchText,
+  hasChanges,
+  patchName,
+  patchCommand,
+  downloadPatch
+} = usePatchExport(leftText, rightText)
 
 // While a change is being previewed, the receiving panel shows the other
 // panel's wording and the hidden sizing layer holds its own, so the two swap
@@ -87,6 +99,14 @@ onMounted(() => {
   isDarkMode.value = savedTheme === 'dark'
   document.documentElement.setAttribute('data-theme', savedTheme)
 })
+
+// Handle Escape key to close the patch export modal
+const handleEscape = (event) => {
+  if (event.key === 'Escape') isPatchOpen.value = false
+}
+
+onMounted(() => window.addEventListener('keydown', handleEscape))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
@@ -167,6 +187,17 @@ const clearText = (targetPanel) => {
             <input type="checkbox" v-model="isDiffEnabled">
             <span class="slider"></span>
           </label>
+
+          <button class="icon-btn action-btn" title="Export patch file" @click="isPatchOpen = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+              <path d="M12 13V7"></path>
+              <path d="M9 10h6"></path>
+              <path d="M9 17h6"></path>
+            </svg>
+            <span>Patch</span>
+          </button>
           
           <button class="icon-btn theme-toggle" title="Toggle Theme" @click="toggleTheme">
             <img src="./assets/light-dark-mode.svg" alt="Theme Icon" />
@@ -378,5 +409,51 @@ const clearText = (targetPanel) => {
         </div>
       </div>
     </div>
+    <Transition name="modal-fade">
+      <div v-if="isPatchOpen" class="modal-backdrop" @click.self="isPatchOpen = false">
+        <div class="modal">
+          <div class="modal-header">
+            <span class="label">Export patch</span>
+            <button class="icon-btn clear-btn" title="Close" @click="isPatchOpen = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <label class="field">
+              <span class="field-label">Target file name</span>
+              <input 
+                v-model="fileName" 
+                class="text-input" 
+                spellcheck="false" 
+                autocomplete="off"
+                placeholder="document.txt"
+              />
+            </label>
+
+            <p v-if="hasChanges" class="hint">
+              Save next to the file, then run <code>{{ patchCommand }}</code>
+            </p>
+            <p v-else class="hint">
+              Both panels hold the same text, so there is nothing to export.
+            </p>
+
+            <pre class="patch-preview">{{ patchText || 'Nothing to export yet.' }}</pre>
+          </div>
+
+          <div class="modal-footer">
+            <button class="text-btn" :disabled="!hasChanges" @click="copyText(patchText)">
+              Copy
+            </button>
+            <button class="text-btn primary" :disabled="!hasChanges" @click="downloadPatch">
+              Download {{ patchName }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
