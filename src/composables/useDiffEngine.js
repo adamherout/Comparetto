@@ -11,6 +11,7 @@ export function useDiffEngine() {
   const processedDiff = ref([])
   // Keys to force re-rendering of contenteditable components when diff changes
   const rightUpdateKey = ref(0)
+  const leftUpdateKey = ref(0)
 
   // Helper to separate a word from its trailing spaces/newlines
   const splitWhitespace = (text) => {
@@ -352,6 +353,7 @@ export function useDiffEngine() {
 
   // Element of the modified panel, used to put the caret back after a jump
   const rightContainer = ref(null)
+  const leftContainer = ref(null)
 
   const history = ref([{ left: '', right: '', caret: null }])
   const historyIndex = ref(0)
@@ -361,7 +363,7 @@ export function useDiffEngine() {
 
   // Where the caret was after the last edit in the modified panel. The edit
   // handlers already work this out, so it is recorded rather than remeasured.
-  let lastRightCaret = null
+  let lastCaret = null
   let isTimeTravelling = false
   let commitTimeout = null
 
@@ -374,7 +376,7 @@ export function useDiffEngine() {
 
     // Anything that was undone is discarded as soon as a new edit lands
     const trimmed = history.value.slice(0, historyIndex.value + 1)
-    trimmed.push({ left: leftText.value, right: rightText.value, caret: lastRightCaret })
+    trimmed.push({ left: leftText.value, right: rightText.value, caret: lastCaret })
 
     if (trimmed.length > HISTORY.maxEntries) trimmed.shift()
 
@@ -382,7 +384,7 @@ export function useDiffEngine() {
     historyIndex.value = trimmed.length - 1
 
     // Only reuse a caret for the edit that produced it
-    lastRightCaret = null
+    lastCaret = null
   }
 
   // Every change schedules a commit, rapid changes keep pushing it back
@@ -405,14 +407,21 @@ export function useDiffEngine() {
 
     // Force Vue to destroy and rebuild the grid
     rightUpdateKey.value++
+    leftUpdateKey.value++
 
     await nextTick()
     isTimeTravelling = false
 
     // Typing steps remember their caret; button and tooltip steps do not
-    if (entry.caret !== null && rightContainer.value) {
-      rightContainer.value.focus()
-      restoreCaret(rightContainer.value, entry.caret)
+    if (entry.caret) {
+      const container = entry.caret.panel === 'left'
+        ? leftContainer.value
+        : rightContainer.value
+
+      if (container) {
+        container.focus()
+        restoreCaret(container, entry.caret.offset)
+      }
     }
   }
 
@@ -484,10 +493,9 @@ export function useDiffEngine() {
     }
 
     // Force Vue to destroy and rebuild the grid
-    if (targetPanel === 'right') {
-      rightUpdateKey.value++
-      lastRightCaret = newCursorPos
-    }
+    if (targetPanel === 'left') leftUpdateKey.value++
+    else rightUpdateKey.value++
+    lastCaret = { panel: targetPanel, offset: newCursorPos }
 
     // Wait for the redraw, then put the cursor back
     await nextTick()
@@ -514,10 +522,9 @@ export function useDiffEngine() {
     textRef.value = currentText.slice(0, start) + pastedText + currentText.slice(end)
 
     // Force Vue to destroy and rebuild the grid
-    if (targetPanel === 'right') {
-      rightUpdateKey.value++
-      lastRightCaret = start + pastedText.length
-    }
+    if (targetPanel === 'left') leftUpdateKey.value++
+    else rightUpdateKey.value++
+    lastCaret = { panel: targetPanel, offset: start + pastedText.length }
 
     // Wait for the redraw, then put the cursor back
     await nextTick()
@@ -531,12 +538,13 @@ export function useDiffEngine() {
     
     if (targetPanel === 'left') {
       leftText.value = text
+      leftUpdateKey.value++
     }
     if (targetPanel === 'right') {
       rightText.value = text
       rightUpdateKey.value++
-      lastRightCaret = start
     }
+    lastCaret = { panel: targetPanel, offset: start }
 
     await nextTick()
     restoreCaret(container, start)
@@ -549,11 +557,13 @@ export function useDiffEngine() {
     isDiffEnabled,
     processedDiff,
     rightUpdateKey,
+    leftUpdateKey,
     splitWhitespace,
     handleEdit,
     handleKeyDown,
     handlePaste,
     rightContainer,
+    leftContainer,
     undo,
     redo,
     canUndo,

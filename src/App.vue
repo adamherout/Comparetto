@@ -10,38 +10,45 @@ const {
   isDiffEnabled, 
   processedDiff,
   rightUpdateKey,
+  leftUpdateKey,
   splitWhitespace, 
   handleEdit,
   handleKeyDown,
   handlePaste,
-  rightContainer
+  rightContainer,
+  leftContainer
 } = useDiffEngine()
 
 // Use the diff tooltip composable to manage state and logic related to the floating tooltip
 const {
   isHoverEnabled,
+  isLeftEditable,
   tooltip,
-  showTooltip,
   hideTooltip,
   cancelHideTooltip,
   revertChange,
-  previewIndex,
+  isPreviewTarget,
   startPreview,
   endPreview,
-  applyChange
-} = useDiffTooltip(processedDiff, rightText, rightUpdateKey)
+  applyChange,
+  handleRightEnter,
+  handleRightLeave
+} = useDiffTooltip(processedDiff, { leftText, rightText, leftUpdateKey, rightUpdateKey })
 
-// True while the original panel is offering this block
-const isPreviewing = (index) => previewIndex.value === index
+// While a change is being previewed, the receiving panel shows the other
+// panel's wording and the hidden sizing layer holds its own, so the two swap
+// places and the block keeps its width either way
+const incomingText = (panel, block) =>
+  panel === 'left' ? block.added.value : block.removed.value
 
-// While previewing, the modified panel shows the original wording and the
-// hidden sizing layer holds the modified wording, so the two swap places and
-// the block keeps its width either way
-const shownText = (block, index) =>
-  isPreviewing(index) ? block.removed.value : block.added.value
+const ownText = (panel, block) =>
+  panel === 'left' ? block.removed.value : block.added.value
 
-const ghostText = (block, index) =>
-  isPreviewing(index) ? block.added.value : block.removed.value
+const shownText = (panel, block, index) =>
+  isPreviewTarget(panel, index) ? incomingText(panel, block) : ownText(panel, block)
+
+const ghostText = (panel, block, index) =>
+  isPreviewTarget(panel, index) ? ownText(panel, block) : incomingText(panel, block)
 
 // State for menu expansion, initialized from local storage
 const isMenuExpanded = ref(localStorage.getItem('menuExpanded') !== 'false')
@@ -143,6 +150,12 @@ const clearText = (targetPanel) => {
         <!-- The sliding container for the tools -->
         <div class="menu-items" :class="{ 'is-expanded': isMenuExpanded }">
           
+          <span class="toggle-label">Edit original</span>
+          <label class="switch">
+            <input type="checkbox" v-model="isLeftEditable">
+            <span class="slider"></span>
+          </label>
+
           <span class="toggle-label">Hover</span>
           <label class="switch">
             <input type="checkbox" v-model="isHoverEnabled">
@@ -204,51 +217,60 @@ const clearText = (targetPanel) => {
             </button>
           </div>
         </div>
-        <div 
+                <div 
           v-if="showDiff" 
+          ref="leftContainer"
           class="content-display"
-          contenteditable="false"
+          :contenteditable="isLeftEditable"
           spellcheck="false"
+          @input="handleEdit($event, 'left')"
+          @keydown="handleKeyDown($event, 'left')"
+          @paste="handlePaste($event, 'left')"
         >
-          <template v-for="(block, index) in processedDiff" :key="'left-' + index">
-            <span v-if="block.isReplacement" class="replacement-grid">
-              <span class="ghost-layer">
-                <span>{{ splitWhitespace(block.added.value).word }}</span>
-                <span>{{ splitWhitespace(block.added.value).space }}</span>
+          <span :key="leftUpdateKey">
+            <template v-for="(block, index) in processedDiff" :key="'left-' + index">
+              <span v-if="block.isReplacement" class="replacement-grid">
+                <span class="ghost-layer" contenteditable="false">
+                  <span>{{ splitWhitespace(ghostText('left', block, index)).word }}</span>
+                  <span>{{ splitWhitespace(ghostText('left', block, index)).space }}</span>
+                </span>
+                <span class="visible-layer">
+                  <span 
+                    :class="isPreviewTarget('left', index) ? 'preview-incoming-added' : 'highlight-removed'"
+                    @mouseenter="startPreview(block, index, 'left')"
+                    @mouseleave="endPreview()"
+                    @click="applyChange(index, 'left')"
+                  >{{ splitWhitespace(shownText('left', block, index)).word }}</span>
+                  <span>{{ splitWhitespace(shownText('left', block, index)).space }}</span>
+                </span>
+                <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
-              <span class="visible-layer">
+              <span v-else-if="block.added" contenteditable="false">
+                <span 
+                  class="dotted-bg ghost-text"
+                  :class="{ 'preview-restore-added': isPreviewTarget('left', index) }"
+                  @mouseenter="startPreview(block, index, 'left')"
+                  @mouseleave="endPreview()"
+                  @click="applyChange(index, 'left')"
+                >{{ splitWhitespace(block.value).word }}</span>
+                <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
+              </span>
+              <span v-else-if="block.removed">
                 <span 
                   class="highlight-removed"
-                  @mouseenter="startPreview(block, index)"
+                  :class="{ 'preview-delete': isPreviewTarget('left', index) }"
+                  @mouseenter="startPreview(block, index, 'left')"
                   @mouseleave="endPreview()"
-                  @click="applyChange(index)"
-                >{{ splitWhitespace(block.removed.value).word }}</span>
+                  @click="applyChange(index, 'left')"
+                >{{ splitWhitespace(block.value).word }}</span>
+                <span>{{ splitWhitespace(block.value).space }}</span>
               </span>
-              <span class="filler-layer dotted-bg"></span>
-            </span>
-            <span v-else-if="block.added">
-              <span 
-                class="dotted-bg ghost-text"
-                @mouseenter="startPreview(block, index)"
-                @mouseleave="endPreview()"
-                @click="applyChange(index)"
-              >{{ splitWhitespace(block.value).word }}</span>
-              <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
-            </span>
-            <span v-else-if="block.removed">
-              <span 
-                class="highlight-removed"
-                @mouseenter="startPreview(block, index)"
-                @mouseleave="endPreview()"
-                @click="applyChange(index)"
-              >{{ splitWhitespace(block.value).word }}</span>
-              <span>{{ splitWhitespace(block.value).space }}</span>
-            </span>
-            <span v-else>
-              <span>{{ splitWhitespace(block.value).word }}</span>
-              <span>{{ splitWhitespace(block.value).space }}</span>
-            </span>
-          </template>
+              <span v-else>
+                <span>{{ splitWhitespace(block.value).word }}</span>
+                <span>{{ splitWhitespace(block.value).space }}</span>
+              </span>
+            </template>
+          </span>
         </div>
         <textarea 
           v-else 
@@ -299,36 +321,39 @@ const clearText = (targetPanel) => {
         >
           <span :key="rightUpdateKey">
             <template v-for="(block, index) in processedDiff" :key="'right-' + index">
-              <span v-if="block.isReplacement" class="replacement-grid">
+                            <span v-if="block.isReplacement" class="replacement-grid">
                 <span class="ghost-layer" contenteditable="false">
-                  <span>{{ splitWhitespace(ghostText(block, index)).word }}</span>
-                  <span>{{ splitWhitespace(ghostText(block, index)).space }}</span>
+                  <span>{{ splitWhitespace(ghostText('right', block, index)).word }}</span>
+                  <span>{{ splitWhitespace(ghostText('right', block, index)).space }}</span>
                 </span>
                 <span class="visible-layer">
                   <span 
-                    :class="isPreviewing(index) ? 'preview-incoming' : 'highlight-added'"
-                    @mouseenter="showTooltip($event, block, index)"
-                    @mouseleave="hideTooltip()"
-                  >{{ splitWhitespace(shownText(block, index)).word }}</span>
-                  <span>{{ splitWhitespace(shownText(block, index)).space }}</span>
+                    :class="isPreviewTarget('right', index) ? 'preview-incoming' : 'highlight-added'"
+                    @mouseenter="handleRightEnter($event, block, index)"
+                    @mouseleave="handleRightLeave()"
+                    @click="applyChange(index, 'right')"
+                  >{{ splitWhitespace(shownText('right', block, index)).word }}</span>
+                  <span>{{ splitWhitespace(shownText('right', block, index)).space }}</span>
                 </span>
                 <span class="filler-layer dotted-bg" contenteditable="false"></span>
               </span>
               <span v-else-if="block.removed" contenteditable="false">
                 <span 
                   class="dotted-bg ghost-text"
-                  :class="{ 'preview-restore': isPreviewing(index) }"
-                  @mouseenter="showTooltip($event, block, index)"
-                  @mouseleave="hideTooltip()"
+                  :class="{ 'preview-restore': isPreviewTarget('right', index) }"
+                  @mouseenter="handleRightEnter($event, block, index)"
+                  @mouseleave="handleRightLeave()"
+                  @click="applyChange(index, 'right')"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
               </span>
               <span v-else-if="block.added">
                 <span 
                   class="highlight-added"
-                  :class="{ 'preview-delete': isPreviewing(index) }"
-                  @mouseenter="showTooltip($event, block, index)"
-                  @mouseleave="hideTooltip()"
+                  :class="{ 'preview-delete': isPreviewTarget('right', index) }"
+                  @mouseenter="handleRightEnter($event, block, index)"
+                  @mouseleave="handleRightLeave()"
+                  @click="applyChange(index, 'right')"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span>{{ splitWhitespace(block.value).space }}</span>
               </span>

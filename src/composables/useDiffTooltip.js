@@ -1,10 +1,11 @@
 import { ref, watch } from 'vue'
 
-export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
+export function useDiffTooltip(processedDiff, panels) {
+  const { leftText, rightText, leftUpdateKey, rightUpdateKey } = panels
 
   // State to enable or disable the hover feature
   const isHoverEnabled = ref(localStorage.getItem('hoverFeature') !== 'false')
-
+  
   // Watch for changes to the hover feature state and persist it in localStorage
   watch(isHoverEnabled, (val) => {
     localStorage.setItem('hoverFeature', val)
@@ -12,6 +13,16 @@ export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
       hideTooltip(true)
       previewIndex.value = null
     }
+  })
+
+  // Whether the original panel can be typed in and written to. On by default.
+  const isLeftEditable = ref(localStorage.getItem('leftEditable') !== 'false')
+
+  watch(isLeftEditable, (val) => {
+    localStorage.setItem('leftEditable', val)
+    // The interaction model changes, so drop anything mid-flight
+    endPreview()
+    hideTooltip(true)
   })
 
   // State for the tooltip. Only ever raised by the modified panel.
@@ -23,9 +34,15 @@ export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
     left: '0px'
   })
 
-  // Index of the block the original panel is currently offering. The modified
-  // panel renders that block as the result instead of raising a tooltip.
-  const previewIndex = ref(null)
+    // The block being offered, and which panel is offering it. The *other*
+  // panel renders it as the pending result.
+  const preview = ref({ index: null, source: null })
+
+  // True when this panel should render block `index` as the pending result
+  const isPreviewTarget = (panel, index) =>
+    preview.value.index === index &&
+    preview.value.source !== null &&
+    preview.value.source !== panel
 
   let hideTimeout = null
 
@@ -48,35 +65,45 @@ export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
   const isChange = (block) =>
     !!block && (block.isReplacement || block.added || block.removed)
 
-  // Apply the original's version of one block to the modified panel. This is
-  // the only mutation in the app, and it always targets the right panel.
-  const applyChange = (index) => {
+    // Copy one block from the hovered panel into the other one. Writing to the
+  // original is refused while it is locked.
+  const applyChange = (index, fromPanel = 'left') => {
     if (index === null || index === undefined) return
 
     const block = processedDiff.value[index]
     if (!isChange(block)) return
 
-    rightText.value = processedDiff.value
-      .map((b, i) => (i === index ? getLeftText(b) : getRightText(b)))
-      .join('')
-
-    rightUpdateKey.value++
+    if (fromPanel === 'left') {
+      rightText.value = processedDiff.value
+        .map((b, i) => (i === index ? getLeftText(b) : getRightText(b)))
+        .join('')
+      rightUpdateKey.value++
+    } else {
+      if (!isLeftEditable.value) return
+      leftText.value = processedDiff.value
+        .map((b, i) => (i === index ? getRightText(b) : getLeftText(b)))
+        .join('')
+      leftUpdateKey.value++
+    }
 
     // The diff has been rebuilt, so the old index means nothing now
-    previewIndex.value = null
+    endPreview()
     hideTooltip(true)
   }
 
-  // Hovering the original panel: show the result on the right instead of
+  // Hovering a panel shows the result on the opposite side instead of
   // floating a tooltip over the text being hovered
-  const startPreview = (block, index) => {
+  const startPreview = (block, index, sourcePanel) => {
     if (!isHoverEnabled.value) return
     if (!isChange(block)) return
-    previewIndex.value = index
+    // Hovering the modified panel only means something if the original can take it
+    if (sourcePanel === 'right' && !isLeftEditable.value) return
+
+    preview.value = { index, source: sourcePanel }
   }
 
   const endPreview = () => {
-    previewIndex.value = null
+    preview.value = { index: null, source: null }
   }
 
   // What the tooltip should say. Only the modified panel raises it, and it
@@ -90,6 +117,7 @@ export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
   // Show the tooltip above the hovered element in the modified panel
   const showTooltip = (event, block, index) => {
     if (!isHoverEnabled.value) return
+    if (isLeftEditable.value) return
     if (!isChange(block)) return
 
     clearTimeout(hideTimeout)
@@ -121,19 +149,35 @@ export function useDiffTooltip(processedDiff, rightText, rightUpdateKey) {
     clearTimeout(hideTimeout)
   }
 
-  // Clicking the tooltip applies the change it is describing
-  const revertChange = () => applyChange(tooltip.value.targetIndex)
+  // The modified panel either previews onto the original or raises the
+  // tooltip, depending on the lock, but never both at once
+  const handleRightEnter = (event, block, index) => {
+    if (isLeftEditable.value) startPreview(block, index, 'right')
+    else showTooltip(event, block, index)
+  }
 
-  return {
+  const handleRightLeave = () => {
+    endPreview()
+    hideTooltip()
+  }
+
+  // Clicking the tooltip applies the change it is describing
+    const revertChange = () => applyChange(tooltip.value.targetIndex, 'left')
+
+    return {
     isHoverEnabled,
+    isLeftEditable,
     tooltip,
     showTooltip,
     hideTooltip,
     cancelHideTooltip,
     revertChange,
-    previewIndex,
+    preview,
+    isPreviewTarget,
     startPreview,
     endPreview,
-    applyChange
+    applyChange,
+    handleRightEnter,
+    handleRightLeave
   }
 }
