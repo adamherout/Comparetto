@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue'
+import { SAMPLE_TEXTS } from './sampleTexts'
 
 // Dots stand for "nothing here", so they stay neutral in every candidate
 // except the current one, where they are already indigo
@@ -112,7 +113,8 @@ const block = (selector, values) =>
   Object.entries(values).map(([key, value]) => `${VAR_NAMES[key]}:${value}`).join(';') +
   '}'
 
-export function useAdminPanel() {
+export function useAdminPanel(panels) {
+  const { leftText, rightText } = panels
   const isAdminOpen = ref(false)
   const paletteId = ref(localStorage.getItem('palette') || 'classic')
 
@@ -144,5 +146,19 @@ export function useAdminPanel() {
   // Applied during setup rather than on mount, so there is no flash of red
   applyPalette(paletteId.value)
 
-  return { isAdminOpen, paletteId, applyPalette }
+  const sampleId = ref('')
+
+  const loadSample = (id) => {
+    const sample = SAMPLE_TEXTS.find((s) => s.id === id)
+    if (!sample) return
+
+    leftText.value = sample.left
+    rightText.value = sample.right
+  }
+
+  watch(sampleId, (id) => {
+    if (id) loadSample(id)
+  })
+
+    return { isAdminOpen, paletteId, applyPalette, sampleId, loadSample }
 }

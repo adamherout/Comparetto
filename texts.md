@@ -40,3 +40,36 @@ Arthur Pendelton managed a pristine, organized antique boutique located in the b
 
 He prepared a spot on his spotless pine counter, pushing away a few pristine carriage clocks and a silver magnifying glass. The moment his delicate instruments brushed the pristine lock, the box produced a sharp, piercing whistle. The noise echoed off the brick walls, terrifying Arthur's energetic black dog, Buster. Before Arthur could question the strange gentleman about its history, he noticed he had disappeared into the bustling crowd outside, leaving behind just a strong smell of peppermint.
 ```
+
+## Right
+```
+Dobrý deň,
+obraciam sa na vás s prosbou o možnosť využívať dáta o aktuálnych polohách vozidiel verejnej dopravy pre môj osobný projekt. Jedná sa o aplikáciu pre pár kolegov z DPMB.
+
+Na portáli data.brno.cz som našiel dataset "Polohy vozidel hromadné dopravy / Public transit positional data". V popise datasetu sa odporúča na odber aktuálnych pozícií využiť WebSocket: https://gis.brno.cz/ags4/rest/services/stream_kordis_26/StreamServer/subscribe
+
+Pri pokuse o pripojenie som však bol presmerovaný na prihlasovaciu stránku, takže tento stream vyžaduje autentifikovaný prístup.
+
+Chcel by som sa opýtať, či je možné pre tento účel získať prístupové údaje a akým spôsobom o ne môžem požiadať. Dáta by slúžili výlučne na zobrazenie aktuálnej polohy vozidla vodičom v rámci internej aplikácie, s príslušným uvedením zdroja (KORDIS / data.brno.cz).
+
+Ďakujem za odpoveď a za čas, ktorý tomu venujete.
+
+S pozdravom
+```
+
+## Left
+```
+Vážená pani / Vážený pán,
+
+dovoľujem si sa na Vás obrátiť s prosbou o informácie týkajúce sa prístupu k dátam o aktuálnych polohách vozidiel verejnej dopravy.
+
+Na portáli data.brno.cz som dohľadal dataset „Polohy vozidel hromadné dopravy / Public transit positional data“. V jeho popise sa na odber aktuálnych pozícií odporúča využiť WebSocket (https://gis.brno.cz/ags4/rest/services/stream_kordis_26/StreamServer/subscribe). Pri pokuse o nadviazanie spojenia som však zistil, že tento stream vyžaduje autentifikovaný prístup.
+
+V súčasnosti pracujem na menšom nekomerčnom projekte – internej aplikácii určenej pre úzku skupinu kolegov z Dopravného podniku mesta Brna (DPMB). Jej cieľom je prehľadné zobrazenie aktuálnej polohy vozidiel. Rád by som sa preto informoval, či je možné na tento účel získať prístupové údaje a aký je štandardný postup pre ich udelenie.
+
+Získané dáta by boli využité výlučne v rámci tejto aplikácie, s plným rešpektovaním podmienok a riadnym uvedením zdroja (KORDIS / data.brno.cz).
+
+Vopred Vám ďakujem za Vašu ochotu a čas venovaný tejto žiadosti.
+
+S pozdravom,
+```

@@ -4,6 +4,7 @@ import { usePatchExport } from './composables/usePatchExport'
 import { useDiffEngine } from './composables/useDiffEngine'
 import { useDiffTooltip } from './composables/useDiffTooltip'
 import { useAdminPanel, PALETTES } from './composables/useAdminPanel'
+import { SAMPLE_TEXTS } from './composables/sampleTexts'
 
 // Use the diff engine composable to manage state and logic related to text comparison
 const { 
@@ -49,7 +50,7 @@ const {
 } = usePatchExport(leftText, rightText)
 
 // TEMPORARY admin panel, opened from the logo
-const { isAdminOpen, paletteId } = useAdminPanel()
+const { isAdminOpen, paletteId, sampleId } = useAdminPanel({ leftText, rightText })
 
 const currentPalette = computed(
   () => PALETTES.find((p) => p.id === paletteId.value) || PALETTES[0]
@@ -486,6 +487,15 @@ const clearText = (targetPanel) => {
                   {{ option.name }}
                 </option>
               </select>
+              <label class="field">
+              <span class="field-label">Load test text</span>
+              <select v-model="sampleId" class="text-input">
+                <option value="" disabled>Choose a sample…</option>
+                <option v-for="sample in SAMPLE_TEXTS" :key="sample.id" :value="sample.id">
+                  {{ sample.name }}
+                </option>
+              </select>
+            </label>
             </label>
 
             <p class="hint">{{ currentPalette.note }}</p>
