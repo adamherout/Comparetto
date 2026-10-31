@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { usePatchExport } from './composables/usePatchExport'
 import { useDiffEngine } from './composables/useDiffEngine'
 import { useDiffTooltip } from './composables/useDiffTooltip'
+import { useAdminPanel, PALETTES } from './composables/useAdminPanel'
+import { SAMPLE_TEXTS } from './composables/sampleTexts'
 
 // Use the diff engine composable to manage state and logic related to text comparison
 const { 
@@ -46,6 +48,13 @@ const {
   patchCommand,
   downloadPatch
 } = usePatchExport(leftText, rightText)
+
+// TEMPORARY admin panel, opened from the logo
+const { isAdminOpen, paletteId, sampleId } = useAdminPanel({ leftText, rightText })
+
+const currentPalette = computed(
+  () => PALETTES.find((p) => p.id === paletteId.value) || PALETTES[0]
+)
 
 // While a change is being previewed, the receiving panel shows the other
 // panel's wording and the hidden sizing layer holds its own, so the two swap
@@ -102,7 +111,9 @@ onMounted(() => {
 
 // Handle Escape key to close the patch export modal
 const handleEscape = (event) => {
-  if (event.key === 'Escape') isPatchOpen.value = false
+  if (event.key !== 'Escape') return
+  isPatchOpen.value = false
+  isAdminOpen.value = false
 }
 
 onMounted(() => window.addEventListener('keydown', handleEscape))
@@ -164,7 +175,7 @@ const clearText = (targetPanel) => {
 
   <div class="workspace">
     <header class="header">
-      <h1>Comparetto</h1>
+            <h1 class="logo-btn" title="Admin panel" @click="isAdminOpen = true">Comparetto</h1>
       
       <div class="header-controls">
         <!-- The sliding container for the tools -->
@@ -451,6 +462,62 @@ const clearText = (targetPanel) => {
             <button class="text-btn primary" :disabled="!hasChanges" @click="downloadPatch">
               Download {{ patchName }}
             </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+        <Transition name="modal-fade">
+      <div v-if="isAdminOpen" class="modal-backdrop" @click.self="isAdminOpen = false">
+        <div class="modal">
+          <div class="modal-header">
+            <span class="label">Admin panel</span>
+            <button class="icon-btn clear-btn" title="Close" @click="isAdminOpen = false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <label class="field">
+              <span class="field-label">Colour scheme</span>
+              <select v-model="paletteId" class="text-input">
+                <option v-for="option in PALETTES" :key="option.id" :value="option.id">
+                  {{ option.name }}
+                </option>
+              </select>
+              <label class="field">
+              <span class="field-label">Load test text</span>
+              <select v-model="sampleId" class="text-input">
+                <option value="" disabled>Choose a sample…</option>
+                <option v-for="sample in SAMPLE_TEXTS" :key="sample.id" :value="sample.id">
+                  {{ sample.name }}
+                </option>
+              </select>
+            </label>
+            </label>
+
+            <p class="hint">{{ currentPalette.note }}</p>
+
+            <div class="admin-sample">
+              <span>In the heart of a </span>
+              <span class="replacement-grid">
+                <span class="ghost-layer"><span>very bustling</span></span>
+                <span class="visible-layer"><span class="highlight-removed">bustling</span></span>
+                <span class="filler-layer dotted-bg"></span>
+              </span>
+              <span>, neon-lit </span>
+              <span class="highlight-removed">city</span>
+              <span> lived a </span>
+              <span class="highlight-added">tiny</span>
+              <span>, silver robot. </span>
+              <span class="dotted-bg">placeholder</span>
+            </div>
+
+            <p class="hint">
+              The panels behind this window update live — close it to see a full document.
+            </p>
           </div>
         </div>
       </div>

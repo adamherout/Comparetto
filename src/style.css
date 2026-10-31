@@ -183,9 +183,9 @@ input:checked + .slider:before {
 }
 
 .clear-btn:hover {
-  background-color: var(--diff-removed-text);
-  border-color: var(--diff-removed-text);
-  color: var(--bg-panel);
+  background-color: #cc0000;
+  border-color: #cc0000;
+  color: #ffffff;
 }
 
 .action-btn {
@@ -708,3 +708,28 @@ textarea {
     flex-direction: column;
   }
 }
+
+/* TEMPORARY palette review panel */
+.logo-btn {
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-sample {
+  padding: 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-main);
+  border-radius: 6px;
+}
+
+:root[data-palette="mono"] .highlight-removed,
+:root[data-palette="mono"] .preview-delete {
+  text-decoration: line-through;
+}
+
+:root[data-palette="mono"] .highlight-added {
+  text-decoration: underline;
+}
+/* TEMPORARY palette review panel */
