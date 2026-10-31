@@ -322,6 +322,7 @@ textarea {
   background-color: var(--diff-removed-bg);
   color: var(--diff-removed-text);
   border-radius: 3px;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .highlight-added {
@@ -372,11 +373,6 @@ textarea {
   cursor: pointer;
 }
 
-.interactive-hovers .ghost-text:hover {
-  --diff-dotted-dot: var(--diff-dotted-hover-dot);
-  background-color: var(--diff-dotted-hover-bg);
-}
-
 .preview-incoming {
   background-color: var(--diff-removed-bg);
   color: var(--diff-removed-text);
@@ -391,10 +387,22 @@ textarea {
   box-shadow: inset 0 0 0 1px var(--diff-removed-text);
 }
 
+.preview-delete,
+.preview-delete-added {
+  background-color: var(--diff-dotted-bg);
+  background-image: radial-gradient(var(--diff-dotted-dot) 1px, transparent 1px);
+  background-size: 12px 16px;
+  background-position: center;
+  border-radius: 3px;
+  color: transparent;
+}
+
 .preview-delete {
-  text-decoration: line-through;
-  color: var(--diff-removed-text);
-  background-color: var(--diff-removed-bg);
+  box-shadow: inset 0 0 0 1px var(--diff-removed-text);
+}
+
+.preview-delete-added {
+  box-shadow: inset 0 0 0 1px var(--diff-added-text);
 }
 
 .preview-incoming-added {
@@ -417,104 +425,15 @@ textarea {
   user-select: none;
 }
 
-.diff-tooltip {
-  position: absolute;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.5;
+.interactive-hovers .highlight-removed,
+.interactive-hovers .highlight-added,
+.interactive-hovers .preview-incoming,
+.interactive-hovers .preview-incoming-added,
+.interactive-hovers .preview-restore,
+.interactive-hovers .preview-restore-added,
+.interactive-hovers .preview-delete,
+.interactive-hovers .preview-delete-added {
   cursor: pointer;
-  z-index: 9999;
-  white-space: pre-wrap;
-  transform: translate(-50%, -100%);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.15s ease, visibility 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.diff-tooltip::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 12px;
-  background: transparent;
-}
-
-.diff-tooltip.is-visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.diff-tooltip.tooltip-added {
-  background-color: var(--diff-added-bg);
-  color: var(--diff-added-text);
-  border: 1px solid var(--diff-added-text);
-}
-
-.diff-tooltip.tooltip-added:hover {
-  background-color: var(--diff-added-text);
-  color: var(--bg-panel);
-}
-
-.diff-tooltip.tooltip-removed {
-  background-color: var(--diff-removed-bg);
-  color: var(--diff-removed-text);
-  border: 1px solid var(--diff-removed-text);
-}
-
-.diff-tooltip.tooltip-removed:hover {
-  background-color: var(--diff-removed-text);
-  color: var(--bg-panel);
-}
-
-.diff-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 5px;
-  border-style: solid;
-}
-
-.diff-tooltip.tooltip-added::after {
-  border-color: var(--diff-added-text) transparent transparent transparent;
-}
-
-.diff-tooltip.tooltip-removed::after {
-  border-color: var(--diff-removed-text) transparent transparent transparent;
-}
-
-.highlight-removed {
-  background-color: var(--diff-removed-bg);
-  color: var(--diff-removed-text);
-  border-radius: 3px;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.interactive-hovers .highlight-removed {
-  cursor: pointer;
-}
-
-.interactive-hovers .highlight-removed:hover {
-  background-color: var(--diff-removed-text);
-  color: var(--bg-panel);
-}
-
-.interactive-hovers .highlight-added {
-  cursor: pointer;
-}
-
-.interactive-hovers .highlight-added:hover {
-  background-color: var(--diff-added-text);
-  color: var(--bg-panel);
 }
 
 .modal-backdrop {

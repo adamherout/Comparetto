@@ -26,16 +26,10 @@ const {
 const {
   isHoverEnabled,
   isLeftEditable,
-  tooltip,
-  hideTooltip,
-  cancelHideTooltip,
-  revertChange,
   isPreviewTarget,
   startPreview,
   endPreview,
-  applyChange,
-  handleRightEnter,
-  handleRightLeave
+  applyChange
 } = useDiffTooltip(processedDiff, { leftText, rightText, leftUpdateKey, rightUpdateKey })
 
 // Use the patch export composable to manage state and logic related to generating and downloading patches
@@ -161,17 +155,6 @@ const clearText = (targetPanel) => {
       {{ notification }}
     </div>
   </Transition>
-
-  <div 
-    class="diff-tooltip tooltip-removed" 
-    :class="{ 'is-visible': tooltip.visible }"
-    :style="{ top: tooltip.top, left: tooltip.left }"
-    @mouseenter="cancelHideTooltip"
-    @mouseleave="hideTooltip()"
-    @click="revertChange"
-  >
-    {{ splitWhitespace(tooltip.text).word }}
-  </div>
 
   <div class="workspace">
     <header class="header">
@@ -300,7 +283,7 @@ const clearText = (targetPanel) => {
               <span v-else-if="block.removed">
                 <span 
                   class="highlight-removed"
-                  :class="{ 'preview-delete': isPreviewTarget('left', index) }"
+                  :class="{ 'preview-delete-added': isPreviewTarget('left', index) }"
                   @mouseenter="startPreview(block, index, 'left')"
                   @mouseleave="endPreview()"
                   @click="applyChange(index, 'left')"
@@ -371,8 +354,8 @@ const clearText = (targetPanel) => {
                 <span class="visible-layer">
                   <span 
                     :class="isPreviewTarget('right', index) ? 'preview-incoming' : 'highlight-added'"
-                    @mouseenter="handleRightEnter($event, block, index)"
-                    @mouseleave="handleRightLeave()"
+                    @mouseenter="startPreview(block, index, 'right')"
+                    @mouseleave="endPreview()"
                     @click="applyChange(index, 'right')"
                   >{{ splitWhitespace(shownText('right', block, index)).word }}</span>
                   <span>{{ splitWhitespace(shownText('right', block, index)).space }}</span>
@@ -383,8 +366,8 @@ const clearText = (targetPanel) => {
                 <span 
                   class="dotted-bg ghost-text"
                   :class="{ 'preview-restore': isPreviewTarget('right', index) }"
-                  @mouseenter="handleRightEnter($event, block, index)"
-                  @mouseleave="handleRightLeave()"
+                  @mouseenter="startPreview(block, index, 'right')"
+                  @mouseleave="endPreview()"
                   @click="applyChange(index, 'right')"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span class="unselectable-space">{{ splitWhitespace(block.value).space }}</span>
@@ -393,8 +376,8 @@ const clearText = (targetPanel) => {
                 <span 
                   class="highlight-added"
                   :class="{ 'preview-delete': isPreviewTarget('right', index) }"
-                  @mouseenter="handleRightEnter($event, block, index)"
-                  @mouseleave="handleRightLeave()"
+                  @mouseenter="startPreview(block, index, 'right')"
+                  @mouseleave="endPreview()"
                   @click="applyChange(index, 'right')"
                 >{{ splitWhitespace(block.value).word }}</span>
                 <span>{{ splitWhitespace(block.value).space }}</span>
