@@ -254,17 +254,19 @@ const clearText = (targetPanel) => {
         >
           <span :key="leftUpdateKey">
             <template v-for="(block, index) in processedDiff" :key="'left-' + index">
-              <span v-if="block.isReplacement" class="replacement-grid">
+              <span 
+                v-if="block.isReplacement" 
+                class="replacement-grid"
+                @mouseenter="startPreview(block, index, 'left')"
+                @mouseleave="endPreview()"
+                @click="applyChange(index, 'left')"
+                >
                 <span class="ghost-layer" contenteditable="false">
                   <span>{{ splitWhitespace(ghostText('left', block, index)).word }}</span>
                   <span>{{ splitWhitespace(ghostText('left', block, index)).space }}</span>
                 </span>
                 <span class="visible-layer">
-                  <span 
-                    :class="isPreviewTarget('left', index) ? 'preview-incoming-added' : 'highlight-removed'"
-                    @mouseenter="startPreview(block, index, 'left')"
-                    @mouseleave="endPreview()"
-                    @click="applyChange(index, 'left')"
+                  <span :class="isPreviewTarget('left', index) ? 'preview-incoming-added' : 'highlight-removed'"
                   >{{ splitWhitespace(shownText('left', block, index)).word }}</span>
                   <span>{{ splitWhitespace(shownText('left', block, index)).space }}</span>
                 </span>
@@ -346,17 +348,19 @@ const clearText = (targetPanel) => {
         >
           <span :key="rightUpdateKey">
             <template v-for="(block, index) in processedDiff" :key="'right-' + index">
-                            <span v-if="block.isReplacement" class="replacement-grid">
+              <span 
+                v-if="block.isReplacement" 
+                class="replacement-grid"
+                @mouseenter="startPreview(block, index, 'right')"
+                @mouseleave="endPreview()"
+                @click="applyChange(index, 'right')"
+                >
                 <span class="ghost-layer" contenteditable="false">
                   <span>{{ splitWhitespace(ghostText('right', block, index)).word }}</span>
                   <span>{{ splitWhitespace(ghostText('right', block, index)).space }}</span>
                 </span>
                 <span class="visible-layer">
-                  <span 
-                    :class="isPreviewTarget('right', index) ? 'preview-incoming' : 'highlight-added'"
-                    @mouseenter="startPreview(block, index, 'right')"
-                    @mouseleave="endPreview()"
-                    @click="applyChange(index, 'right')"
+                  <span :class="isPreviewTarget('right', index) ? 'preview-incoming' : 'highlight-added'"
                   >{{ splitWhitespace(shownText('right', block, index)).word }}</span>
                   <span>{{ splitWhitespace(shownText('right', block, index)).space }}</span>
                 </span>
