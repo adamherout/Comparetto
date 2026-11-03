@@ -425,6 +425,7 @@ textarea {
   user-select: none;
 }
 
+.interactive-hovers .replacement-grid,
 .interactive-hovers .highlight-removed,
 .interactive-hovers .highlight-added,
 .interactive-hovers .preview-incoming,
