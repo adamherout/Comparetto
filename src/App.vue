@@ -66,7 +66,7 @@ const ghostText = (panel, block, index) =>
   isPreviewTarget(panel, index) ? ownText(panel, block) : incomingText(panel, block)
 
 // State for menu expansion, initialized from local storage
-const isMenuExpanded = ref(localStorage.getItem('menuExpanded') !== 'false')
+const isMenuExpanded = ref(localStorage.getItem('menuExpanded') === 'true')
 
 // Watcher to persist menu expansion state to local storage whenever it changes
 watch(isMenuExpanded, (val) => {
