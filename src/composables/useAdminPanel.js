@@ -20,7 +20,7 @@ const neutralDotsDark = {
 export const PALETTES = [
   {
     id: 'classic',
-    name: 'Red / green — current',
+    name: 'Red / green',
     note: 'Familiar, but encodes a value judgment and is the worst pair for colour blindness.',
     light: {
       removedBg: 'rgba(255, 74, 74, 0.2)', removedText: '#cc0000',
@@ -37,7 +37,7 @@ export const PALETTES = [
   },
   {
     id: 'amber-blue',
-    name: 'Amber / blue',
+    name: 'Amber / blue — current default',
     note: 'The colour-blind-safe standard. Competes with the indigo in the logo.',
     light: {
       removedBg: 'rgba(186, 117, 23, 0.2)', removedText: '#854f0b',
@@ -116,7 +116,7 @@ const block = (selector, values) =>
 export function useAdminPanel(panels) {
   const { leftText, rightText } = panels
   const isAdminOpen = ref(false)
-  const paletteId = ref(localStorage.getItem('palette') || 'classic')
+  const paletteId = ref(localStorage.getItem('palette') || 'amber-blue')
 
   // A style tag appended to head beats style.css on document order alone, so
   // both themes can be redefined without knowing which one is active
