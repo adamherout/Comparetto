@@ -200,7 +200,7 @@ const clearText = (targetPanel) => {
 
   <div class="workspace">
     <header class="header">
-            <h1 class="logo-btn" title="Admin panel" @click="handleLogoClick">Comparetto</h1>
+            <h1 class="logo-btn" @click="handleLogoClick">Comparetto</h1>
       
       <div class="header-controls">
         <!-- The sliding container for the tools -->
