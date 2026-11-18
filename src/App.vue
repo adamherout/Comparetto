@@ -80,27 +80,39 @@ const toggleMenu = () => {
 
 // State for notification
 const notification = ref('')
-// State for theme
-const isDarkMode = ref(true)
+// Resolved in index.html before Vue is loaded
+const isDarkMode = ref(document.documentElement.getAttribute('data-theme') === 'dark')
+// Device preference, followed until the user picks a theme themselves
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 // Computed property to determine if the diff view should be shown
 const showDiff = computed(() => isDiffEnabled.value && leftText.value && rightText.value)
 
-// Toggle theme
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value
-  const newTheme = isDarkMode.value ? 'dark' : 'light'
-  
-  // Apply to HTML tag
-  document.documentElement.setAttribute('data-theme', newTheme)
-  // Save the user's choice to their browser
-  localStorage.setItem('theme', newTheme)
+const applyTheme = (dark) => {
+  isDarkMode.value = dark
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
 }
 
-// Initialize theme based on saved preference or default to dark mode
+// Toggle theme
+const toggleTheme = () => {
+  const dark = !isDarkMode.value
+  applyTheme(dark)
+  // Storing a choice is what stops the device preference taking over again
+  localStorage.setItem('theme', dark ? 'dark' : 'light')
+}
+
+// Follow the device while the user has not overridden it
+const handleSchemeChange = (event) => {
+  if (localStorage.getItem('theme')) return
+  applyTheme(event.matches)
+}
+
+// On mount, check if the theme is already set, if not, apply the device preference
 onMounted(() => {
-  const savedTheme = localStorage.getItem('theme') || 'dark'
-  isDarkMode.value = savedTheme === 'dark'
-  document.documentElement.setAttribute('data-theme', savedTheme)
+  if (!document.documentElement.getAttribute('data-theme')) {
+    const saved = localStorage.getItem('theme')
+    applyTheme(saved ? saved === 'dark' : darkQuery.matches)
+  }
+  darkQuery.addEventListener('change', handleSchemeChange)
 })
 
 // Handle Escape key to close the patch export modal
@@ -112,6 +124,7 @@ const handleEscape = (event) => {
 
 onMounted(() => window.addEventListener('keydown', handleEscape))
 onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
+onBeforeUnmount(() => darkQuery.removeEventListener('change', handleSchemeChange))
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
