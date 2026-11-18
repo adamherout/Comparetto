@@ -43,7 +43,33 @@ const {
   downloadPatch
 } = usePatchExport(leftText, rightText)
 
-// TEMPORARY admin panel, opened from the logo
+// TEMPORARY admin panel, opened from the logo with a gesture
+const TAP_WINDOW_MS = 600
+const TAPS_NEEDED = 5
+
+let tapCount = 0
+let tapTimer = null
+
+const handleLogoClick = (event) => {
+  if (event.ctrlKey || event.metaKey) {
+    isAdminOpen.value = true
+    tapCount = 0
+    clearTimeout(tapTimer)
+    return
+  }
+
+  // Each tap resets the window, so the five have to be consecutive
+  tapCount++
+  clearTimeout(tapTimer)
+
+  if (tapCount >= TAPS_NEEDED) {
+    tapCount = 0
+    isAdminOpen.value = true
+    return
+  }
+
+  tapTimer = setTimeout(() => { tapCount = 0 }, TAP_WINDOW_MS)
+}
 const { isAdminOpen, paletteId, sampleId } = useAdminPanel({ leftText, rightText })
 
 const currentPalette = computed(
@@ -123,8 +149,11 @@ const handleEscape = (event) => {
 }
 
 onMounted(() => window.addEventListener('keydown', handleEscape))
-onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
-onBeforeUnmount(() => darkQuery.removeEventListener('change', handleSchemeChange))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleEscape)
+  darkQuery.removeEventListener('change', handleSchemeChange)
+  clearTimeout(tapTimer)
+})
 
 // Helper to show the notification and auto-hide it
 const showNotification = (msg) => {
@@ -171,7 +200,7 @@ const clearText = (targetPanel) => {
 
   <div class="workspace">
     <header class="header">
-            <h1 class="logo-btn" title="Admin panel" @click="isAdminOpen = true">Comparetto</h1>
+            <h1 class="logo-btn" title="Admin panel" @click="handleLogoClick">Comparetto</h1>
       
       <div class="header-controls">
         <!-- The sliding container for the tools -->

@@ -631,7 +631,6 @@ textarea {
 
 /* TEMPORARY palette review panel */
 .logo-btn {
-  cursor: pointer;
   user-select: none;
 }
 
