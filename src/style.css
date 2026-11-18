@@ -197,6 +197,16 @@ input:checked + .slider:before {
   font-weight: 600;
 }
 
+.toggle-btn.is-active,
+.lock-btn.is-locked {
+  background-color: var(--btn-hover);
+  border-color: var(--text-main);
+}
+
+.toggle-btn:not(.is-active) {
+  opacity: 0.55;
+}
+
 .icon-btn svg {
   width: 1.1rem;
   height: 1.1rem;
@@ -614,7 +624,7 @@ textarea {
 }
 
 .menu-items.is-expanded {
-  max-width: 820px;
+  max-width: 200px;
   opacity: 1;
   margin-right: 1rem;
 }

@@ -206,25 +206,45 @@ const clearText = (targetPanel) => {
         <!-- The sliding container for the tools -->
         <div class="menu-items" :class="{ 'is-expanded': isMenuExpanded }">
           
-          <span class="toggle-label">Edit original</span>
-          <label class="switch">
-            <input type="checkbox" v-model="isLeftEditable">
-            <span class="slider"></span>
-          </label>
+          <button 
+            class="icon-btn toggle-btn" 
+            :class="{ 'is-active': isHoverEnabled }"
+            :aria-pressed="isHoverEnabled"
+            aria-label="Hover to preview changes"
+            title="Hover to preview changes"
+            @click="isHoverEnabled = !isHoverEnabled"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="7" width="14" height="7" rx="1.5" fill="currentColor" fill-opacity="0.25"></rect>
+              <path d="M13 12l3 9 2.2-3.8 4.3-1.5L13 12z"></path>
+            </svg>
+          </button>
 
-          <span class="toggle-label">Hover</span>
-          <label class="switch">
-            <input type="checkbox" v-model="isHoverEnabled">
-            <span class="slider"></span>
-          </label>
+          <button 
+            class="icon-btn toggle-btn" 
+            :class="{ 'is-active': isDiffEnabled }"
+            :aria-pressed="isDiffEnabled"
+            aria-label="Highlight differences"
+            title="Highlight differences"
+            @click="isDiffEnabled = !isDiffEnabled"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <path d="M12 4v16"></path>
+              <g stroke-width="1.5">
+                <path d="M5 12h4"></path>
+                <path d="M5 15.5h4"></path>
+                <path d="M15 8.5h4"></path>
+                <path d="M15 15.5h4"></path>
+              </g>
+              <g stroke-width="2.75">
+                <path d="M5 8.5h4"></path>
+                <path d="M15 12h4"></path>
+              </g>
+            </svg>
+          </button>
 
-          <span class="toggle-label">Diff</span>
-          <label class="switch">
-            <input type="checkbox" v-model="isDiffEnabled">
-            <span class="slider"></span>
-          </label>
-
-          <button class="icon-btn action-btn" title="Export patch file" @click="isPatchOpen = true">
+          <button class="icon-btn action-btn" title="Export patch file" @click="isPatchOpen = true" style="display: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
@@ -262,8 +282,25 @@ const clearText = (targetPanel) => {
     <div class="panels-container" :class="{ 'interactive-hovers': isHoverEnabled }">
       <div class="panel">
         <div class="toolbar">
-          <span class="label">Original Text</span>
+          <span class="label">Original</span>
           <div class="actions">
+            <button 
+              class="icon-btn lock-btn" 
+              :class="{ 'is-locked': !isLeftEditable }"
+              :aria-pressed="!isLeftEditable"
+              :aria-label="isLeftEditable ? 'Lock the original' : 'Unlock the original'"
+              :title="isLeftEditable ? 'Lock the original' : 'Unlock the original'"
+              @click="isLeftEditable = !isLeftEditable"
+            >
+              <svg v-if="isLeftEditable" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </button>
             <button class="icon-btn" title="Copy Text" @click="copyText(leftText)">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -356,7 +393,7 @@ const clearText = (targetPanel) => {
       </div>
       <div class="panel">
         <div class="toolbar">
-          <span class="label">Modified Text</span>
+          <span class="label">Modified</span>
           <div class="actions">
             <button class="icon-btn" title="Copy Text" @click="copyText(rightText)">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
